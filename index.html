@@ -2013,15 +2013,22 @@ function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let
 /* follow a wick away from a body (dir -1 up, +1 down). Pixels the colour classes already call wick or this candle's colour count;
    past those, a pixel that only stands out from the background beside it counts if it also matches the wick's own colour as first
    seen next to the body. Screen moiré, scan lines and reflections stand out too, but in the background's colour, not the wick's */
-function rdTrace(D,x,from,dir,lim,c,hw){const {w,d,cls}=D;let y=from+dir,gap=0,end=from,ref=null,n=0,sgn=0;
- const lumAt=k=>d[k]*.3+d[k+1]*.59+d[k+2]*.11;
- while(dir<0?y>=lim:y<lim){const i=y*w+x,k=i*4;let ok=false;
-  if(!(x-hw>=0&&x+hw<w&&(cls[i-hw]===c||cls[i+hw]===c))){const cc=cls[i];
-   if(cc===3||cc===c)ok=true;
-   else if(rdWk(D,x,y,hw)){const side=(lumAt((i-hw)*4)+lumAt((i+hw)*4))/2,s=Math.sign(lumAt(k)-side);
-    if(!ref)ok=Math.abs(y-from)<=3;else ok=Math.abs(d[k]-ref[0])+Math.abs(d[k+1]-ref[1])+Math.abs(d[k+2]-ref[2])<60&&s===sgn;
-    if(ok&&!sgn)sgn=s}}
-  if(ok){end=y;gap=0;if(n<3){ref=ref?ref.map((v,j)=>(v*n+d[k+j])/(n+1)):[d[k],d[k+1],d[k+2]];n++}}else if(++gap>1)break;y+=dir}
+function rdTrace(D,x,from,dir,lim,c,hw,gapMax){const {w,d,cls,dark}=D;gapMax=gapMax||1;let y=from+dir,gap=0,end=from,cx=x;
+ /* follow a wick away from its body (dir -1 up, +1 down). In a photo a wick is a faint 1–2 pixel line, a little blurred, maybe a
+    pixel off the body's centre and drifting with the tilt. Each row looks at the three columns around the current one and takes
+    the one that stands out most from the background on both sides, in the candle's own colour (or grey, brighter on a dark
+    screen). How much it must stand out scales with how much the background ripples there (screen moiré). Short breaks are
+    bridged */
+ const sideAt=(o,a)=>{let r=0,g=0,b=0;for(let q=0;q<3;q++){const k=(o+a+q)*4;r+=d[k];g+=d[k+1];b+=d[k+2]}r/=3;g/=3;b/=3;let v=0;for(let q=0;q<3;q++){const k=(o+a+q)*4;v+=Math.abs(d[k]-r)+Math.abs(d[k+1]-g)+Math.abs(d[k+2]-b)}return [r,g,b,v/3]};
+ const score=(xx,yy)=>{if(xx-hw-3<0||xx+hw+3>=w)return 0;const o=yy*w,i=o+xx,cc=cls[i];if(cls[i-hw]===c||cls[i+hw]===c)return 0;if(cc===3||cc===c)return 999;
+  const L=sideAt(o,xx-hw-2),R=sideAt(o,xx+hw);if(Math.abs(L[0]-R[0])+Math.abs(L[1]-R[1])+Math.abs(L[2]-R[2])>50)return 0;
+  const k=i*4,dr=d[k]-(L[0]+R[0])/2,dg=d[k+1]-(L[1]+R[1])/2,db=d[k+2]-(L[2]+R[2])/2,mag=Math.abs(dr)+Math.abs(dg)+Math.abs(db),need=Math.max(24,2.2*Math.max(L[3],R[3])+10);
+  if(mag<need)return 0;const lum=.3*dr+.59*dg+.11*db,grey=Math.max(dr,dg,db)-Math.min(dr,dg,db)<mag*.35;
+  const okc=c===1?(dg-dr>10&&(dark?dg>8:true)):c===2?(dr-dg>10&&(dark?dr>8:true)):false,okg=grey&&(dark?lum>10:lum<-10);
+  return okc||okg?mag/need:0};
+ /* until the wick is found, look a little wider: a tilted photo moves where the wick leaves the body by a pixel or two */
+ let found=false;while(dir<0?y>=lim:y<lim){let bs=0,bx=cx;const span=found?1:3;for(let dx=0;dx<=span;dx++)for(const xx of dx?[cx-dx,cx+dx]:[cx]){const s=score(xx,y)*(1-dx*.08);if(s>bs){bs=s;bx=xx}}
+  if(bs>0){end=y;gap=0;cx=bx;found=true}else if(++gap>gapMax)break;y+=dir}
  return end}
 function rdWk(D,x,y,hw){const {w,d}=D;if(x-hw-3<0||x+hw+3>=w)return false;const o=y*w;
  /* the background a few pixels either side, averaged over 4 pixels each, and how much it ripples (moiré, scan lines) */
@@ -2054,7 +2061,7 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
   G.length=0;G.push(...out)}
  /* wicks drawn in grey (price candles on a dark theme): follow them from the body */
  for(const g of G){const xc=Math.round((g.x0+g.x1)/2);for(const x of [xc-1,xc,xc+1]){if(x<0||x>=w)continue;
-  const hw=Math.max(3,Math.round((g.x1-g.x0)/2+3)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw),bot=rdTrace(D,x,g.b,1,y1,g.c,hw);
+  const hw=Math.max(4,Math.round((g.x1-g.x0)*.32)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw,Math.max(1,Math.round((g.x1-g.x0)*.25))),bot=rdTrace(D,x,g.b,1,y1,g.c,hw,Math.max(1,Math.round((g.x1-g.x0)*.25)));
   if(top<g.t&&g.t-top<(y1-y0)*.5)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.5)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b)}
  let C=G.filter(g=>g.bot-g.top>=2||g.x1-g.x0>=2);if(C.length<8)return [];
@@ -2117,7 +2124,7 @@ function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3
   const mass=G=>G.r.reduce((m,r)=>m+r.b-r.t+1,0),GB=grp.reduce((m,G)=>mass(G)>mass(m)?G:m,grp[0]),keepX=new Set(GB.r.map(r=>r.x));
   for(const r of GB.r){t=Math.min(t,r.t);bt=Math.max(bt,r.b);if(r.c===1)nu+=r.b-r.t+1;else nd+=r.b-r.t+1}
   if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(const r of GB.r){cx+=r.x*(r.b-r.t+1);cw+=r.b-r.t+1}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
-  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(3,Math.round(per*.42)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw),bot=rdTrace(D,x,g.b,1,y1,g.c,hw);
+  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(4,Math.round(per*.25)),gm=Math.max(1,Math.round(per*.1)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw,gm),bot=rdTrace(D,x,g.b,1,y1,g.c,hw,gm);
    if(top<g.t&&g.t-top<(y1-y0)*.4)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.4)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b);S.push(g)}
  /* a "candle" far away from all its neighbours is an icon or a label, not price */
@@ -2840,7 +2847,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795747002';
+window.APPV='1795796193';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
