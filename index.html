@@ -33,7 +33,7 @@ h1,h2,h3,.cap{font-family:"Saira Semi Condensed","Avenir Next Condensed","Helvet
 .status .combo{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:13px;letter-spacing:.06em}.status .combo span{white-space:nowrap}
 .status .combo b{font-weight:600}
 .status .combo{align-items:center}.sbs{margin-left:auto;display:flex;gap:6px}.sb{background:transparent;border:1px solid var(--inv);color:var(--inv);font:600 12px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif;letter-spacing:.14em;text-transform:uppercase;min-height:32px;padding:0 10px;cursor:pointer}.sb[aria-pressed=false]{opacity:.55}
-nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:12px 0 4px}
+nav.tabs{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:12px 0 4px}
 nav.tabs .btn{font-size:13px;letter-spacing:.08em;padding:0 8px 0 22px;white-space:nowrap}nav.tabs .btn::before{left:9px}
 .btn{position:relative;border:1px solid var(--ink);background:transparent;color:var(--ink);font:600 14px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif;letter-spacing:.12em;text-transform:uppercase;min-height:44px;padding:0 14px 0 26px;cursor:pointer;text-align:left}
 .btn::before{content:"";position:absolute;left:10px;top:50%;width:7px;height:7px;margin-top:-3.5px;background:var(--ink)}
@@ -124,9 +124,23 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .lookup .lkrow{display:grid;grid-template-columns:52px 1fr;align-items:center;gap:6px;margin:0 0 6px}.lookup .lkl{font:600 13px 'Saira Semi Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase}.lkopts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.lkopts .btn{min-height:40px;font-size:12px;padding:0 4px;justify-content:center;text-align:center;letter-spacing:.04em}.lkopts .btn::before{display:none}.lookup label{font:600 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.1em;text-transform:uppercase}
 .lookup select{font:inherit;font-size:16px;padding:9px 34px 9px 10px;border:1px solid var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0h12L6 8z' fill='%234e4b42'/%3E%3C/svg%3E") no-repeat right 12px center;color:var(--ink);border-radius:0;width:100%;min-width:0;-webkit-appearance:none;appearance:none}.lookup select:disabled{opacity:.55}.lookup select:focus{outline:none;box-shadow:0 0 0 2px var(--gold)}
 .lookup input{font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--ink);background:var(--card);color:var(--ink);border-radius:0;width:100%;min-width:0}.lookup input:focus{outline:none;box-shadow:0 0 0 2px var(--gold)}
+.lktabs{display:grid;grid-template-columns:1fr auto;gap:6px;margin:0 0 10px}.lktabs .btn{min-height:38px;font-size:12.5px}
+.ulgrid{display:grid;grid-template-columns:52px 1fr 1fr;gap:6px;align-items:center}.ulgrid select{font:inherit;font-size:15px;padding:8px 26px 8px 8px;border:1px solid var(--ink);background:var(--card) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M0 0h10L5 7z' fill='%234e4b42'/%3E%3C/svg%3E") no-repeat right 8px center;color:var(--ink);border-radius:0;width:100%;min-width:0;-webkit-appearance:none;appearance:none}
+.btn.lklink{display:inline-flex;min-height:28px;padding:0 8px;font-size:12px;margin-left:4px;vertical-align:middle}.btn.lklink::before{display:none}
 .lkres{border-top:1px solid var(--line);margin-top:6px;padding-top:8px}.lkres p{margin:6px 0;font-size:15px}.lkfig{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0}.lkfig svg{display:block;width:100%;height:auto}
 .pastebox{min-height:64px;border:1px dashed var(--ink);background:var(--card);padding:8px;font-size:14px;color:var(--mut);outline:none;overflow:hidden;-webkit-user-select:text;user-select:text}.pastebox:empty::before{content:attr(data-ph);color:var(--mut);letter-spacing:.04em}.pastebox:focus{border-style:solid;box-shadow:0 0 0 2px var(--gold)}.pastebox img{max-width:100%;max-height:60px}
 .rdpics canvas{display:block;width:100%;height:auto;margin-top:4px}.rdpics{padding:8px}
+
+.pf{display:grid;gap:6px}.pf>div{position:relative;min-width:0}.pft{position:absolute;left:6px;top:3px;font:700 10px 'Saira Semi Condensed',sans-serif;letter-spacing:.16em;color:var(--ink);opacity:.7;z-index:1}
+.pf svg{display:block}.pfp,.pfv,.pfprof{border:1px solid var(--line);background:var(--pane);overflow:hidden}
+.pf.port{grid-template-columns:34% 1fr;grid-template-areas:"rot rot" "prof p" "leg v" "panel panel";grid-template-rows:auto 250px 150px auto}
+.pf.land{grid-template-columns:27% 1fr 31%;grid-template-areas:"bar bar bar" "prof p panel" "leg v panel";grid-template-rows:auto 1fr 36%;height:calc(100vh - 14px);height:calc(100dvh - 14px)}
+.pf .rotate{grid-area:rot;margin:0;font-size:13.5px;color:var(--mut)}.pfbar{grid-area:bar;display:flex;align-items:center;gap:12px;font-size:13px}.pfbar b{font:700 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase}.pfbar .btn{margin-left:auto;min-height:30px;font-size:12px;padding:0 12px}.pfbar .btn::before{display:none}
+.pfprof{grid-area:prof}.pfp{grid-area:p}.pfv{grid-area:v}.pfleg{grid-area:leg;font:700 13px 'Saira Semi Condensed',sans-serif;letter-spacing:.2em;padding:6px 2px;color:var(--ink)}.pfleg span{font:400 11px inherit;letter-spacing:.02em;color:var(--mut)}
+.pfpanel{grid-area:panel;overflow-y:auto;padding:2px 2px 8px}.pfpanel .q{font-size:17px;margin:4px 0 8px}.pfpanel .m{font-size:13.5px;margin:4px 0 8px}
+.pfopts{display:grid;gap:6px}.pfopts .btn{min-height:44px;font-size:12.5px;text-align:left;justify-content:flex-start;line-height:1.25;padding:6px 10px 6px 26px;letter-spacing:.03em;text-transform:none}
+.pftab{margin:4px 0 8px}.pftab>div{border-top:1px solid var(--line);padding:6px 2px;font-size:13px;line-height:1.3}.pftab span{display:block}.pftab b{display:block;font-size:13px;color:var(--olive)}.pftab .lost b{color:var(--rust)}
+body.pfland .status,body.pfland nav.tabs,body.pfland .rule{display:none}body.pfland .app{max-width:none;padding:6px max(10px,env(safe-area-inset-left)) 6px max(10px,env(safe-area-inset-left))}
 .pop.lab{font-size:17px}.pop.chain{background:var(--ink);color:var(--gold);font-size:16px;letter-spacing:.14em;text-transform:uppercase}.pop.brk{background:var(--rust);color:var(--inv);font-size:15px;text-transform:uppercase}
 .spark{position:fixed;z-index:9;width:9px;height:9px;background:var(--gold);outline:1px solid var(--ink);pointer-events:none}
 .dexnew.ink{background:var(--ink);color:var(--gold);border-color:var(--gold)}.dexnew.ink small{color:var(--inv)}.dexnew.olive{background:var(--olive);color:var(--inv)}
@@ -136,7 +150,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .orders .op{font:600 13px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif;letter-spacing:.08em;color:var(--mut);font-variant-numeric:tabular-nums}
 .orders .ob{grid-column:2/-1;height:4px;background:rgba(78,75,66,.16);position:relative}.orders .ob i{position:absolute;inset:0 auto 0 0;background:var(--ink)}.orders .done .ob i{background:var(--gold)}
 .dt.s3{border:2px solid var(--gold);box-shadow:2px 2px 0 rgba(78,75,66,.25),inset 0 0 0 1px var(--ink)}.dt.s3::after{content:"";position:absolute;top:8px;right:8px;width:8px;height:8px;background:var(--gold);transform:rotate(45deg);outline:1px solid var(--ink);box-shadow:-12px 0 0 0 var(--gold)}
-@media(max-width:600px){nav.tabs{gap:4px}nav.tabs .btn{font-size:10.5px!important;letter-spacing:.02em;padding:0 2px;text-align:center}nav.tabs .btn::before{display:none}.dgrid{gap:5px}.dt{padding:5px 5px 7px}.dt .nm{font-size:12px}.dexnew{font-size:15px;white-space:normal;width:86vw}}
+@media(max-width:600px){nav.tabs{gap:4px;grid-template-columns:repeat(3,minmax(0,1fr))}nav.tabs .btn{font-size:10.5px!important;letter-spacing:.02em;padding:0 2px;text-align:center}nav.tabs .btn::before{display:none}.dgrid{gap:5px}.dt{padding:5px 5px 7px}.dt .nm{font-size:12px}.dexnew{font-size:15px;white-space:normal;width:86vw}}
 @media(prefers-reduced-motion:no-preference){.dexnew{animation:lv 2.2s ease forwards}}
 @media(max-width:600px){
  .app{padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));padding-top:max(8px,env(safe-area-inset-top))}
@@ -164,7 +178,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 <div class="app">
  <div class="status" aria-live="polite"><span class="lv" id="lv">Lv 1</span><div class="xpb"><i id="xpbar" style="width:0"></i></div><span class="xpt" id="xpt">0 XP</span>
   <div class="combo"><span>Combo <b id="combo">×1.0</b></span><span>Streak <b id="streak">0</b></span><span>Proficient <b id="prof">0</b> / 18</span><span class="sbs"><button class="sb" id="snd" aria-pressed="true">Sound on</button><button class="sb" id="mus" aria-pressed="true">Music on</button></span></div></div>
- <nav class="tabs"><button class="btn" data-tab="road">Roadmap</button><button class="btn" data-tab="dex">Patterns</button><button class="btn" data-tab="codex">Codex</button><button class="btn" data-tab="free">Free play</button><button class="btn" data-tab="scan">Scan</button></nav>
+ <nav class="tabs"><button class="btn" data-tab="road">Roadmap</button><button class="btn" data-tab="dex">Patterns</button><button class="btn" data-tab="codex">Codex</button><button class="btn" data-tab="free">Free play</button><button class="btn" data-tab="scan">Scan</button><button class="btn" data-tab="prof">Profile</button></nav>
  <div class="rule"><i></i></div>
  <main id="screen"></main>
 </div>
@@ -505,8 +519,8 @@ function newRound(){
 
 /* ---------- screens ---------- */
 let TAB='road',CUR=null;
-function setTab(t){MUSIC.level(0);$('#screen').classList.remove('bonusr');if(t==='dex'&&TAB==='dex')DV.i=null;DRILL=null;TAB=t;$('#screen').onclick=null;$$('nav .btn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===t||(t==='play'&&CUR==='free'&&b.dataset.tab==='free')));
- if(t==='road')roadmap();else if(t==='scan')scanScreen();else if(t==='dex')dexScreen();else if(t==='codex')codex();else if(t==='free')freeScreen()}
+function setTab(t){document.body.classList.remove('pfland');MUSIC.level(0);$('#screen').classList.remove('bonusr');if(t==='dex'&&TAB==='dex')DV.i=null;DRILL=null;TAB=t;$('#screen').onclick=null;$$('nav .btn').forEach(b=>b.setAttribute('aria-pressed',b.dataset.tab===t||(t==='play'&&CUR==='free'&&b.dataset.tab==='free')));
+ if(t==='road')roadmap();else if(t==='prof')pfScreen();else if(t==='scan')scanScreen();else if(t==='dex')dexScreen();else if(t==='codex')codex();else if(t==='free')freeScreen()}
 $('nav.tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)setTab(b.dataset.tab)});
 const sqs=k=>{const s=status(k);return `<span><i class="sq s${s.lvl}"></i>${SK[k]}</span>`};
 function roadmap(){setTimeout(()=>window.syncUI&&syncUI(),0);
@@ -634,7 +648,7 @@ function lkParse(s){s=(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
  s=s.split(' ').map(w=>w.length>3?w.replace(/s$/,''):w).join(' ');for(const [k,...ws] of LKW)if(ws.includes(s))return k;
  const x=s.replace(/higher|lower/g,' '),hi=/high|hig|hgh|max|top/.test(x),lo=/low|lw|min|bottom/.test(x),up=/higher|mas alto|above|over/.test(s),dn=/lower|mas bajo|below|under/.test(s),eq=/equal|igual|same|double/.test(s);
  if(hi&&!lo){if(eq)return 'EH';if(up)return 'HH';if(dn)return 'LH'}if(lo&&!hi){if(eq)return 'EL';if(dn)return 'LL';if(up)return 'HL'}return null}
-function lkResult(){const out=$('#lkout');if(!out)return;const pk=DV.lp,ck=DV.lc;
+function lkResult(){if(DV.lkm==='ul')return ulResult();const out=$('#lkout');if(!out)return;const pk=DV.lp,ck=DV.lc;
  if(!DV.lp&&!DV.lc){out.innerHTML='';return}
  const bad=(raw,k)=>raw&&!k?`<p class="m">“${raw.replace(/[<>&"]/g,'')}” isn't one I know. Use higher high, equal high, lower high, lower low, equal low or higher low (or HH, EH, LH, LL, EL, HL).</p>`:'';
  if(!pk||!ck){out.innerHTML=bad(DV.lp,pk)+bad(DV.lc,ck)||'';return}
@@ -646,12 +660,35 @@ function lkResult(){const out=$('#lkout');if(!out)return;const pk=DV.lp,ck=DV.lc
   <p>Price <b>${WORD[pk].toLowerCase()}</b>, CVD <b>${WORD[ck].toLowerCase()}</b>. ${e.g.read}</p><p class="m">${cat.why}</p>
   ${ex?`<div class="lkfig"><div><div class="lab" style="margin:0">Price</div>${dexSvg(ex,'P',e.lean)}</div><div><div class="lab" style="margin:0">CVD</div>${dexSvg(ex,'V',e.lean)}</div></div>`:''}
   <button class="btn wide" data-dx="${DEXI[e.id]}">Open ${no3(e.no)} in the book</button></div>`}
-function lkPicker(){const HI=['HH','EH','LH'],LO=['LL','EL','HL'],side=DV.lp?(HI.includes(DV.lp)?HI:LO):null,o=(k,w)=>`<option value="${k}"${DV['l'+w]===k?' selected':''}>${WORD[k]}</option>`;
- return `<div class="lab" style="margin-top:0">Look up a pattern</div>
+function lkPicker(){if(DV.lkm==='ul')return lkUL();const HI=['HH','EH','LH'],LO=['LL','EL','HL'],side=DV.lp?(HI.includes(DV.lp)?HI:LO):null,o=(k,w)=>`<option value="${k}"${DV['l'+w]===k?' selected':''}>${WORD[k]}</option>`;
+ return `${lkTabs()}
   <div class="lkrow"><label class="lkl" for="lkp">Price:</label><select id="lkp"><option value="">Choose…</option><optgroup label="Highs">${HI.map(k=>o(k,'p')).join('')}</optgroup><optgroup label="Lows">${LO.map(k=>o(k,'p')).join('')}</optgroup></select></div>
   <div class="lkrow"><label class="lkl" for="lkc">CVD:</label><select id="lkc"${side?'':' disabled'}><option value="">${side?'Choose…':'Choose price first'}</option>${side?side.map(k=>o(k,'c')).join(''):''}</select></div>
   <div id="lkout"></div>`}
-function lkBind(){const p=$('#lkp'),c=$('#lkc');if(!p)return;
+const lkTabs=()=>`<div class="lktabs"><button class="btn" data-lkm="one" aria-pressed="${DV.lkm!=='ul'}">Look up a pattern</button><button class="btn" data-lkm="ul" aria-pressed="${DV.lkm==='ul'}">U&amp;L</button></div>`;
+/* upper and lower together: the highs and the lows of both windows give the structure */
+function lkUL(){const HI=['HH','EH','LH'],LO=['LL','EL','HL'],U=DV.ul||(DV.ul={}),sel=(id,keys)=>`<select id="${id}" data-ul="${id}"><option value="">Choose…</option>${keys.map(k=>`<option value="${k}"${U[id]===k?' selected':''}>${WORD[k]}</option>`).join('')}</select>`;
+ return `${lkTabs()}<p class="m" style="margin:2px 0 8px;font-size:13.5px">The last two highs and the last two lows, in both windows.</p>
+  <div class="ulgrid"><span></span><span class="lkl">Highs</span><span class="lkl">Lows</span>
+   <span class="lkl">Price</span>${sel('ph',HI)}${sel('pl',LO)}<span class="lkl">CVD</span>${sel('ch',HI)}${sel('cl',LO)}</div><div id="lkout"></div>`}
+/* what the two sides draw together, in the words used at the screen */
+const ULSHAPE={'EH|HL':'ascending triangle: a ceiling that holds while the lows step up into it','EL|LH':'descending triangle: a floor that holds while the highs step down onto it','LH|HL':'contracting triangle: highs lower, lows higher, squeezing','HH|LL':'broadening: both edges pushed out','HH|HL':'uptrend: higher highs and higher lows','LH|LL':'downtrend: lower highs and lower lows','EH|EL':'range: flat top and flat bottom',
+ 'HH|EL':'flat floor, rising top: the range is widening upward','EH|LL':'flat ceiling, falling floor: the range is widening downward','LH|EL':'flat floor under lower highs','HH|HL ':'','EH|EL ':''};
+const shp=(h,l)=>ULSHAPE[h+'|'+l]||ULSHAPE[l+'|'+h]||`${WORD[h].toLowerCase()}s with ${WORD[l].toLowerCase()}s`;
+function ulResult(){const out=$('#lkout'),U=DV.ul||{};if(!out)return;if(!(U.ph&&U.pl&&U.ch&&U.cl)){out.innerHTML=Object.keys(U).some(k=>U[k])?'<p class="m">Pick all four.</p>':'';return}
+ const S=STRUCTS.find(s=>s.hk===U.ph&&s.lk===U.pl&&s.chk===U.ch&&s.clk===U.cl),r=S.read,cat=CAT[r.cat]||CAT.none,se=DEX[DEXI['s:'+r.name]],eh=DEX[DEXI[`hi:${U.ph}|${U.ch}`]],el=DEX[DEXI[`lo:${U.pl}|${U.cl}`]];
+ const key='ul:'+[U.ph,U.pl,U.ch,U.cl].join(''),ex=DEXEX[key]||(DEXEX[key]=dexExample({...se,pool:[S]},0));
+ const lean=v=>v>0?'leans up':v<0?'leans down':'no lean',line=(lab,e)=>{const cn=(CAT[e.cat]||CAT.none).n.toLowerCase();return `<p><b>${lab}</b> · ${e.n}${e.n.toLowerCase().includes(cn)?'':': '+cn}, ${lean(e.lean)}. <button class="btn lklink" data-dx="${DEXI[e.id]}">${no3(e.no)}</button></p>`};
+ const agree=eh.lean&&el.lean&&eh.lean!==el.lean;
+ out.innerHTML=`<div class="lkres"><div class="dexhd"><span class="no">${se?no3(se.no):''}</span><span>Highs and lows together</span></div><h3 class="dexname" style="font-size:20px">${r.name}</h3>
+  <div class="pts"><span class="pt">${cat.n}</span><span class="pt">${LEANW[r.lean]}</span></div><p>${r.why}</p>
+  <p class="m"><b>Price:</b> ${shp(U.ph,U.pl)}.<br><b>CVD:</b> ${shp(U.ch,U.cl)}.</p>
+  ${line('Highs',eh)}${line('Lows',el)}
+  ${agree?'<p class="m">The highs and the lows point opposite ways. In the game the latest swing breaks the tie: whichever side printed last leads.</p>':''}
+  ${ex?`<div class="lkfig"><div><div class="lab" style="margin:0">Price</div>${dexSvg(ex,'P',r.lean)}</div><div><div class="lab" style="margin:0">CVD</div>${dexSvg(ex,'V',r.lean)}</div></div>`:''}
+  ${se?`<button class="btn wide" data-dx="${DEXI[se.id]}">Open ${no3(se.no)} in the book</button>`:''}</div>`}
+function lkBind(){if(DV.lkm==='ul'){for(const s of document.querySelectorAll('[data-ul]'))s.onchange=()=>{(DV.ul||(DV.ul={}))[s.dataset.ul]=s.value||null;ulResult();SFX.click()};ulResult();return}
+ const p=$('#lkp'),c=$('#lkc');if(!p)return;
  p.onchange=()=>{const HI=['HH','EH','LH'],k=p.value||null,same=DV.lp&&k&&(HI.includes(DV.lp)===HI.includes(k));DV.lp=k;if(!same)DV.lc=null;$('#lkbox').innerHTML=lkPicker();lkBind();lkResult();SFX.click()};
  c.onchange=()=>{DV.lc=c.value||null;lkResult();SFX.click()}}
 /* screens */
@@ -675,6 +712,7 @@ function dexScreen(){if(DV.i!==null)return dexEntry(DV.i);
  <div class="lab">Staircases · three swings in a row</div>${tiles(DEX.filter(e=>e.kind==='stair'))}`;
 lkBind();lkResult();
  $('#screen').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;SFX.click();
+  if(b.dataset.lkm){DV.lkm=b.dataset.lkm;$('#lkbox').innerHTML=lkPicker();lkBind();lkResult();return}
   if(b.dataset.dx!==undefined){DV.i=+b.dataset.dx;DV.seed=0;scrollTo(0,0);dexEntry(DV.i)}else if(b.dataset.ty!==undefined){DV.type=b.dataset.ty||null;dexScreen()}}}
 function dexEntry(i){const e=DEX[i],st=dexSt(e.id),d=(S.dex||{})[e.id]||{s:0,c:0},key=e.id+'#'+DV.seed;
  const ex=DEXEX[key]||(DEXEX[key]=dexExample(e,DV.seed));const cat=CAT[e.cat]||CAT.none;
@@ -2108,6 +2146,112 @@ function rdDemo(){const types=typesEnding(9,pick(['h','l'])),kP=types.map((ty,k)
  pane(ch.P,0,450);x.fillStyle='#3a3a3a';x.fillRect(0,452,W,3);pane(ch.V,456,H);
  RD.src=c;RD.mode='one';RD.split=null;return Promise.resolve()}
 
+/* ---------- Profile: market profile beside price and CVD ----------
+   One 30-minute TPO period = six 5-minute candles, lettered A, B, C… Each round plays the case where price and CVD
+   already ask for the trade but the profile says the extreme is unfinished: equal highs leave a poor or poorish high,
+   the market comes back to repair it, and only then does the trade work. Stops are judged on candle closes. */
+const PF={st:null};
+const PFL='ABCDEFGHIJKLMNOP',PFN=6,PFTICK=5;
+function pfCandles(o,sp){const out=[];let prev=o;const n=PFN;
+ const tgt=[];for(let i=1;i<=n;i++)tgt.push(o+(sp.c-o)*i/n+(i<n?rnd(-1,1)*(sp.hi-sp.lo)*.22:0));
+ for(let i=0;i<n;i++){let c=Math.min(sp.hi-.15,Math.max(sp.lo+.15,tgt[i]));if(sp.cap!==undefined&&c>sp.cap)c=sp.cap-rnd(.05,.3);if(sp.floor!==undefined&&c<sp.floor)c=sp.floor+rnd(.05,.3);
+  const k={o:prev,c,h:Math.min(sp.hi,Math.max(prev,c)+rnd(.08,.45)),l:Math.max(sp.lo,Math.min(prev,c)-rnd(.08,.45))};out.push(k);prev=c}
+ const ih=sp.ih??ri(1,n-2),il=sp.il??(ih<n/2?ri(Math.ceil(n/2),n-1):ri(0,Math.floor(n/2)-1));out[ih].h=sp.hi;out[il].l=sp.lo;
+ if(sp.spike){const k=out[ih];k.c=Math.min(k.c,sp.cap!==undefined?sp.cap-rnd(.3,.8):k.c);if(ih+1<n)out[ih+1].o=k.c}
+ for(let i=1;i<n;i++){out[i].o=out[i-1].c;out[i].h=Math.max(out[i].h,out[i].o,out[i].c);out[i].l=Math.min(out[i].l,out[i].o,out[i].c)}
+ return out}
+function pfNew(){const side=chance(.5)?'hi':'lo',kind=chance(.55)?'poorish':'poor',brk=chance(.22),T=ri(16,20),J=()=>rnd(-.35,.35);
+ const H1=kind==='poorish'?T+rnd(.45,.7):T+rnd(.3,.45),H2=kind==='poorish'?T+1+rnd(.1,.3):T+rnd(.5,.6),PB=T-rnd(10.5,12);
+ const tail=(kind==='poorish'?T+3:T+2)+rnd(.25,.6),retest=H2+rnd(.3,.36);
+ const P=[{lo:T-15+J(),hi:T-9+J(),c:T-10},{lo:T-11+J(),hi:T-5+J(),c:T-6},{lo:T-7+J(),hi:H1,c:T-3,ih:4},{lo:PB,hi:T-2.5+J(),c:PB+2.5},{lo:PB+1.5,hi:H2,c:T-2,ih:4},{lo:T-5.5+J(),hi:T-.8,c:T-3.5}];
+ const V=[{lo:5,hi:22,c:20},{lo:18,hi:38,c:33},{lo:30,hi:52,c:44,ih:4},{lo:28,hi:46,c:32},{lo:30,hi:74,c:62,ih:4},{lo:52,hi:68,c:58}];
+ if(!brk){P.push({lo:T-4+J(),hi:tail,c:T-1.5,spike:1,cap:H2-.2,ih:2},{lo:T-7.5,hi:retest,c:T-5,cap:H2-.1,ih:1},{lo:T-12,hi:T-6.5,c:T-11},{lo:T-17,hi:T-10.5,c:T-15.5});
+  V.push({lo:50,hi:64,c:54,ih:2},{lo:40,hi:58,c:42,ih:1},{lo:25,hi:44,c:28},{lo:10,hi:30,c:14})}
+ else{P.push({lo:T-2,hi:T+4.5,c:T+3.6,floor:H2+.15,ih:4},{lo:T+2,hi:T+7,c:T+6,floor:H2+.3},{lo:T+4.5,hi:T+10,c:T+9},{lo:T+7,hi:T+12,c:T+11});
+  V.push({lo:55,hi:86,c:84,ih:4},{lo:78,hi:95,c:92},{lo:88,hi:105,c:102},{lo:98,hi:115,c:112})}
+ for(const v of V){const j=rnd(-2,2);v.lo+=j;v.hi+=j;v.c+=j}
+ let CP=[],CV=[],o=T-14,ov=8;for(let i=0;i<P.length;i++){const a=pfCandles(o,P[i]),b=pfCandles(ov,V[i]);CP.push(...a);CV.push(...b);o=a[a.length-1].c;ov=b[b.length-1].c}
+ /* the lows case is the same market upside down */
+ const mir=(C,m)=>C.map(k=>({o:2*m-k.o,c:2*m-k.c,h:2*m-k.l,l:2*m-k.h}));
+ if(side==='lo'){CP=mir(CP,T);CV=mir(CV,60)}
+ const fl=v=>side==='lo'?2*T-v:v;
+ return {side,kind,brk,T,H1:fl(H1),H2:fl(H2),tail:fl(tail),P:CP,V:CV,n:CP.length,base:ri(5240,5300)*5,step:0,vis:6*PFN,ans:{},score:0,d1:6*PFN,d2:7*PFN}}
+/* TPO profile of the candles shown so far: period p prints at bucket b when a candle of p traded inside [b, b+1) */
+function pfProfile(R,upto){const rows=new Map();for(let i=0;i<upto;i++){const k=R.P[i],p=Math.floor(i/PFN);for(let b=Math.floor(k.l);b<=Math.floor(k.h-1e-9);b++){if(!rows.has(b))rows.set(b,new Set());rows.get(b).add(p)}}return rows}
+function pfTop(R,upto){const rows=pfProfile(R,upto),ks=[...rows.keys()].sort((a,b)=>a-b),hi=R.side==='hi',ord=hi?ks.slice().reverse():ks;let single=0;for(const b of ord){if(rows.get(b).size===1)single++;else break}
+ const top=rows.get(ord[0]).size;return {single,top,label:single>=2?'tail':single===1?'poorish':'poor',edge:ord[0],rows}}
+const pfPx=(R,v)=>(R.base+v*PFTICK).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+function pfChart(R,w,W,H,upto,marks){const C=R[w],all=w==='P'?R.P:R.V;let mn=Infinity,mx=-Infinity;for(const k of all){mn=Math.min(mn,k.l);mx=Math.max(mx,k.h)}const pad=(mx-mn)*.06;mn-=pad;mx+=pad;
+ const n=R.n,st=(W-12)/n,X=i=>6+(i+.5)*st,Y=v=>6+(mx-v)/(mx-mn)*(H-12),cw=Math.max(2,st*.62);let s=`<rect width="${W}" height="${H}" fill="${PANE}"/>`;
+ for(let p=0;p*PFN<n;p++){const x0=6+p*PFN*st;if(p%2)s+=`<rect x="${x0}" y="0" width="${PFN*st}" height="${H}" fill="rgba(78,75,66,.05)"/>`;if(w==='P')s+=`<text x="${x0+PFN*st/2}" y="${H-3}" text-anchor="middle" font-size="9" font-weight="700" fill="${INK}" opacity=".45">${PFL[p]}</text>`}
+ for(const m of marks.lines||[])if(m.w===w){const y=Y(m.v);s+=`<line x1="${m.x0!=null?X(m.x0):6}" x2="${m.x1!=null?X(m.x1):W-6}" y1="${y}" y2="${y}" stroke="${m.col||HL}" stroke-width="${m.sw||2}" stroke-dasharray="${m.dash||''}"/>`+(m.t?`<text x="${W-8}" y="${y+(m.below?12:-4)}" text-anchor="end" font-size="10" font-weight="700" fill="${INK}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${m.t}</text>`:'')}
+ for(let i=0;i<Math.min(upto,n);i++){const k=C[i],up=k.c>=k.o,x=X(i),y=Math.min(Y(k.o),Y(k.c)),h=Math.max(1.2,Math.abs(Y(k.o)-Y(k.c)));
+  s+=`<line x1="${x}" x2="${x}" y1="${Y(k.h)}" y2="${Y(k.l)}" stroke="${INK}" stroke-width="1"/><rect x="${x-cw/2}" y="${y}" width="${cw}" height="${h}" fill="${up?HOLLOW:INK}" stroke="${INK}" stroke-width=".9"/>`}
+ for(const m of marks.segs||[])if(m.w===w){const y1=Y(m.v1),y2=Y(m.v2);s+=`<line x1="${X(m.i)}" y1="${y1}" x2="${X(m.j)}" y2="${y2}" stroke="${INK}" stroke-width="5" opacity=".6"/><line x1="${X(m.i)}" y1="${y1}" x2="${X(m.j)}" y2="${y2}" stroke="${HL}" stroke-width="3"/><text x="${(X(m.i)+X(m.j))/2}" y="${(y1+y2)/2+(m.below?16:-7)}" text-anchor="middle" font-size="11" font-weight="700" fill="${INK}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${m.t}</text>`}
+ for(const m of marks.pts||[])if(m.w===w){const x=X(m.i),y=Y(m.v);s+=`<circle cx="${x}" cy="${y}" r="5" fill="${m.col||HL}" stroke="${INK}" stroke-width="1.5"/>`+(m.t?`<text x="${x}" y="${y+(m.below?17:-9)}" text-anchor="middle" font-size="10" font-weight="700" fill="${INK}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${m.t}</text>`:'')}
+ return {svg:`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`,Y,mn,mx}}
+function pfProfileSvg(R,W,H,upto,Y,showTop){const {rows,label,single,edge}=pfTop(R,upto),ks=[...rows.keys()],hi=R.side==='hi';let s=`<rect width="${W}" height="${H}" fill="${PANE}"/>`;
+ const rh=Math.abs(Y(0)-Y(1)),bw=Math.max(6,Math.min(16,(W-44)/10));
+ for(const b of ks){const y0=Y(b+1),ps=[...rows.get(b)].sort((a,b)=>a-b);s+=`<line x1="40" x2="${W}" y1="${y0}" y2="${y0}" stroke="${GRID}"/>`;
+  if(b%3===0)s+=`<text x="36" y="${y0+rh*.75}" text-anchor="end" font-size="8.5" fill="${INK}" opacity=".65">${pfPx(R,b).replace(/\.00$/,'')}</text>`;
+  ps.forEach((p,i)=>{const x=42+i*bw,last=Math.floor((upto-1)/PFN)===p;s+=`<rect x="${x}" y="${y0+.5}" width="${bw-1}" height="${Math.max(1,rh-1)}" fill="${last?HL:HOLLOW}" stroke="${INK}" stroke-width=".7"/>`+(rh>=8&&bw>=8?`<text x="${x+(bw-1)/2}" y="${y0+rh*.78}" text-anchor="middle" font-size="${Math.min(9,rh-1)}" font-weight="700" fill="${INK}">${PFL[p]}</text>`:'')})}
+ if(showTop){const n=Math.max(1,single),bA=edge,bB=hi?edge-n+1:edge+n-1,yA=Y(Math.max(bA,bB)+1),yB=Y(Math.min(bA,bB)),txt=label==='tail'?(hi?'selling tail':'buying tail'):label==='poorish'?`poorish ${hi?'high':'low'}`:`poor ${hi?'high':'low'}`;
+  s+=`<path d="M${W-6} ${yA} h6 V${yB} h-6" fill="none" stroke="${label==='tail'?INK:OR}" stroke-width="2"/><text x="${W-12}" y="${hi?yB+13:yA-5}" text-anchor="end" font-size="10.5" font-weight="700" fill="${label==='tail'?INK:OR}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${txt.toUpperCase()}</text>`}
+ return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`}
+/* what each plan would have done: entries, stops (wick or close) and where it ended */
+function pfPlans(R){const hi=R.side==='hi',sg=hi?1:-1,e1=R.P[R.d1-1].c,e2=R.P[R.d2-1].c,end=R.P[R.n-1].c,run=(entry,from,lvl,mode)=>{for(let i=from;i<R.n;i++){const k=R.P[i];
+   if(mode==='wick'&&sg*(hi?k.h:k.l)>=sg*lvl)return {out:lvl,at:i,stopped:true};if(mode==='close'&&sg*k.c>sg*lvl)return {out:k.c,at:i,stopped:true}}return {out:end,at:R.n-1,stopped:false}};
+ const tick=.25,mk=(name,entry,from,lvl,mode)=>{const r=run(entry,from,lvl,mode),risk=Math.abs(lvl-entry)||1,pnl=sg*(entry-r.out);return {name,entry,lvl,mode,from,...r,R:pnl/risk}};
+ return [mk(`${hi?'Short':'Long'} at the first signal, stop a tick ${hi?'above':'below'} the equal ${hi?'highs':'lows'}`,e1,R.d1,R.H2+sg*tick,'wick'),
+  mk(`${hi?'Short':'Long'} at the first signal, stop on a close ${hi?'above':'below'} the equal ${hi?'highs':'lows'}`,e1,R.d1,R.H2,'close'),
+  mk(`Wait for the repair, then ${hi?'short':'long'}, stop on a close ${hi?'above':'below'} the tail`,e2,R.d2,R.tail,'close'),
+  mk(`Wait for the repair, then ${hi?'short':'long'}, stop a tick ${hi?'above':'below'} the equal ${hi?'highs':'lows'}`,e2,R.d2,R.H2+sg*tick,'wick')]}
+/* the questions */
+function pfSteps(R){const hi=R.side==='hi',S=hi?'short':'long',HL2=hi?'highs':'lows',H1=hi?'high':'low',top=pfTop(R,R.d1).label;
+ const st=[{at:R.d1,q:`Price and CVD at the ${HL2} say?`,o:[[S,`${S[0].toUpperCase()+S.slice(1)}: price made equal ${HL2}, CVD made ${hi?'higher highs':'lower lows'}`],[hi?'long':'short',`${hi?'Long':'Short'}: the ${HL2} are holding`],['none','Nothing yet']],a:S,why:`Absorption at the ${H1}: CVD pushed further ${hi?'up':'down'} than the swing before, price didn't follow. More effort, no result.`},
+  {at:R.d1,q:`And the profile's ${H1}?`,o:[['poorish',`Poorish: a single TPO at the ${H1}`],['poor',`Poor: two or more TPOs flat at the ${H1}`],['tail',`Finished: a tail of two single TPOs`]],a:top,why:top==='poorish'?`One TPO at the extreme: the auction there isn't finished. A tail needs two.`:`The ${H1} is flat: equal ${HL2} print on the same rows in different periods. No tail, no rejection.`},
+  {at:R.d1,q:'The trade?',o:[['now',`${S[0].toUpperCase()+S.slice(1)} now`],['wait',`Wait: let price repair the ${H1} first`]],a:'wait',why:`An unfinished ${H1} tends to get revisited. ${hi?'Shorting':'Buying'} into it now puts the stop right where the repair goes.`},
+  {at:R.d2,q:'What did that push do?',o:[['rep',`Repaired it: a ${hi?'selling':'buying'} tail, candles closed back ${hi?'under':'over'} the ${HL2}`],['brk',`Broke it: candles closed ${hi?'above':'below'} the ${HL2}`]],a:R.brk?'brk':'rep',why:R.brk?`Closes beyond the level and CVD with it: acceptance, not repair.`:`The wick went through and built two single TPOs, but every 5-minute candle closed back ${hi?'below':'above'}: by closes the equal ${HL2} held. CVD made a ${hi?'lower high':'higher low'} on the push: exhaustion.`},
+  {at:R.d2,q:'Now?',o:[['now',`${S[0].toUpperCase()+S.slice(1)} now`],['no',`No ${S}: the setup failed`]],a:R.brk?'no':'now',why:R.brk?`Once candles close ${hi?'above':'below'} the ${HL2}, the ${S} is gone. Standing aside is the trade.`:`Repaired ${H1}, structure intact by closes, exhaustion on the push: everything lines up.`}];
+ if(!R.brk)st.push({at:R.d2,q:'Stop?',o:[['eh',`A tick ${hi?'above':'below'} the equal ${HL2}`],['wick',`A tick ${hi?'above':'below'} the tail`],['close',`On a 5-minute close ${hi?'above':'below'} the tail`]],a:'close',ok2:'wick',why:`Wicks probe; closes decide. A stop on a close ${hi?'above':'below'} the tail only goes when the market accepts beyond the repaired ${H1}.`,cond:A=>A[4]==='now'});
+ return st}
+function pfLayout(){const land=matchMedia('(orientation: landscape)').matches&&innerHeight<560;document.body.classList.toggle('pfland',land&&TAB==='prof');return land}
+function pfScreen(){if(!PF.st)PF.st=pfNew();const R=PF.st,land=pfLayout(),steps=pfSteps(R);while(R.step<steps.length&&steps[R.step].cond&&!steps[R.step].cond(R.ans))R.step++;
+ const cur=steps[R.step],done=R.step>=steps.length&&R.vis>=R.n;
+ $('#screen').innerHTML=`<div class="pf ${land?'land':'port'}">
+  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><button class="btn" id="pfexit">Exit</button></div>`:`<p class="rotate">Turn your phone sideways for the full view.</p>`}
+  <div class="pfprof" id="pfprof"></div><div class="pfp" id="pfp"></div><div class="pfleg">${PFL.slice(0,R.n/PFN).split('').map((l,i)=>i<Math.ceil(R.vis/PFN)?l:'').join(' ')}<br><span>each letter: one 30-minute period</span></div><div class="pfv" id="pfv"></div>
+  <div class="pfpanel" id="pfpanel"></div></div>`;
+ if($('#pfexit'))$('#pfexit').onclick=()=>{SFX.click();setTab('road')};
+ pfDraw();pfPanel()}
+function pfMarks(R){const hi=R.side==='hi',m={lines:[],segs:[],pts:[]},A=R.ans,ci=(w,a,b,f)=>{let best=a;for(let i=a;i<b;i++)if(f(R[w][i],R[w][best]))best=i;return best},hiF=(x,y)=>hi?x.h>y.h:x.l<y.l;
+ if(A[0]!==undefined){const i1=ci('P',2*PFN,3*PFN,hiF),i2=ci('P',4*PFN,5*PFN,hiF),v1=ci('V',2*PFN,3*PFN,hiF),v2=ci('V',4*PFN,5*PFN,hiF),g=k=>hi?k.h:k.l;
+  m.segs.push({w:'P',i:i1,j:i2,v1:g(R.P[i1]),v2:g(R.P[i2]),t:hi?'EH':'EL',below:!hi},{w:'V',i:v1,j:v2,v1:g(R.V[v1]),v2:g(R.V[v2]),t:hi?'HH':'LL',below:!hi})}
+ if(R.vis>=R.d2&&A[3]!==undefined){const ig=ci('P',6*PFN,7*PFN,hiF),vg=ci('V',6*PFN,7*PFN,hiF),v2=ci('V',4*PFN,5*PFN,hiF),g=k=>hi?k.h:k.l;
+  m.segs.push({w:'V',i:v2,j:vg,v1:g(R.V[v2]),v2:g(R.V[vg]),t:hi?'LH':'HL',below:!hi});m.pts.push({w:'P',i:ig,v:g(R.P[ig]),t:'',below:!hi})}
+ if(R.vis>=R.n){const pl=pfPlans(R);m.lines.push({w:'P',v:R.H2,t:`equal ${hi?'highs':'lows'} ${pfPx(R,R.H2)}`,dash:'5 4',col:INK,sw:1.2,below:!hi});if(!R.brk)m.lines.push({w:'P',v:R.tail,t:`tail ${pfPx(R,R.tail)}`,dash:'2 3',col:OR,sw:1.2,below:!hi});
+  m.pts.push({w:'P',i:R.d1-1,v:pl[0].entry,t:'1st signal',col:HOLLOW,below:hi});if(!R.brk)m.pts.push({w:'P',i:R.d2-1,v:pl[2].entry,t:'after repair',col:HL,below:hi})}
+ return m}
+function pfDraw(){const R=PF.st,pp=$('#pfp'),pv=$('#pfv'),pr=$('#pfprof');if(!pp)return;const W=pp.clientWidth,H=pp.clientHeight,Wv=pv.clientWidth,Hv=pv.clientHeight,mk=pfMarks(R);
+ const c=pfChart(R,'P',W,H,R.vis,mk);pp.innerHTML=`<span class="pft">PRICE</span>`+c.svg;pv.innerHTML=`<span class="pft">CVD</span>`+pfChart(R,'V',Wv,Hv,R.vis,mk).svg;
+ const lab=R.ans[3]!==undefined||(R.ans[1]!==undefined&&R.vis<R.d2+1&&R.vis<=R.d1);pr.innerHTML=`<span class="pft">PROFILE</span>`+pfProfileSvg(R,pr.clientWidth,H,R.vis,c.Y,lab)}
+function pfPanel(){const R=PF.st,el=$('#pfpanel'),steps=pfSteps(R);if(!el)return;const cur=steps[R.step];
+ if(R.busy){el.innerHTML='<p class="m">Playing out…</p>';return}
+ if(cur&&R.vis>=cur.at){el.innerHTML=`${R.note?`<p class="m">${R.note}</p>`:''}<p class="q">${cur.q}</p><div class="pfopts">${cur.o.map(([v,t])=>`<button class="btn" data-pf="${v}">${t}</button>`).join('')}</div>`;
+  el.onclick=e=>{const b=e.target.closest('[data-pf]');if(!b)return;const v=b.dataset.pf,ok=v===cur.a,half=cur.ok2&&v===cur.ok2;R.ans[R.step]=v;judge(ok,b,'classify');award(ok?20:half?8:0,b);if(ok)R.score++;
+   R.note=`<b>${ok?'Right.':half?'Close.':'Not quite.'}</b> ${cur.why}`;R.step++;const nx=steps.slice(R.step).find(s=>!s.cond||s.cond(R.ans));
+   if(!nx||R.vis<nx.at){R.busy=true;pfPanel();pfDraw();pfPlay(nx?nx.at:R.n,()=>{R.busy=false;pfScreen()})}else{pfDraw();pfPanel()}};return}
+ if(R.vis<R.n){R.busy=true;pfPanel();pfPlay(R.n,()=>{R.busy=false;pfScreen()});return}
+ const pl=pfPlans(R),hi=R.side==='hi',f=x=>(x>=0?'+':'')+x.toFixed(1)+'R',show=R.brk?[pl[0],pl[1]]:pl;
+ if(!R.fin){R.fin=1;S.pf=S.pf||{r:0,ok:0};S.pf.r++;S.pf.ok+=R.score;save();hud()}
+ el.innerHTML=`${R.note?`<p class="m">${R.note}</p>`:''}<p class="q">${R.brk?'The setup failed':'How each plan did'}</p>
+  <div class="pftab">${show.map(p=>`<div class="${p.stopped?'lost':'won'}"><span>${p.name}</span><b>${f(p.R)} · ${p.stopped?(p.mode==='close'?'stopped on a close':'stopped by a wick'):'held to the end'}</b></div>`).join('')}</div>
+  <p class="m">${R.brk?`Closes ${hi?'above':'below'} the ${hi?'highs':'lows'} with CVD agreeing: no ${hi?'short':'long'}. The close-based stop still took you out on the first close beyond, not on a wick.`:`Entering on the first signal ran into the repair: a stop a tick past the equal ${hi?'highs':'lows'} gets taken by the wick. Waiting for the ${hi?'selling':'buying'} tail gave a cleaner entry and a stop the market didn't touch.`}</p>
+  <p class="m">Profile rounds: ${S.pf.r} · right answers ${S.pf.ok}</p><button class="btn wide" id="pfnext">Next round</button>`;
+ $('#pfnext').onclick=()=>{SFX.round();PF.st=pfNew();pfScreen()}}
+function pfPlay(to,done){const R=PF.st,tick=()=>{if(TAB!=='prof'||PF.st!==R)return;if(R.vis>=to){done();return}R.vis++;pfDraw();if(R.vis%PFN===0)SFX.tick();setTimeout(tick,110)};setTimeout(tick,250)}
+addEventListener('resize',()=>{if(TAB==='prof'&&PF.st){const was=document.body.classList.contains('pfland');if(pfLayout()!==was)pfScreen();else pfDraw()}});
+
 /* ---------- account save: when the game is opened from claude.ai, progress lives in your account ----------
    so the same progress shows on the computer and on the phone. The file copy keeps saving on the device only. */
 const SYNC={ref:null,busy:false,again:false,tm:0,state:'local',last:''};
@@ -2445,7 +2589,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795540919';
+window.APPV='1795738492';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
