@@ -2065,15 +2065,18 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
 /* where one picture holds both windows: the widest band with no candles in the middle of the picture */
 /* Grid reader: find the candle spacing from how the coloured columns repeat, then read one candle per slot.
    Holds up on photos where candles break into pieces (glare, moiré) or touch each other (CVD bars). */
-function rdPrep(D,y0,y1){const {w,cls}=D,H=y1-y0,mask=new Uint8Array(H),rc=new Float32Array(H);
+function rdPrep(D,y0,y1){const {w,cls}=D,H=y1-y0,mask=new Uint8Array(H),band=new Uint8Array(H).fill(1),rc=new Float32Array(H);
  for(let y=y0;y<y1;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}rc[y-y0]=n;if(n>w*.25)mask[y-y0]=1}
  /* keep only the band of rows where the candles are; stray coloured specks above or below are ignored */
  {const sm=new Float32Array(H);let mx=0;for(let y=0;y<H;y++){let a=0,c=0;for(let k=-6;k<=6;k++){const q=y+k;if(q>=0&&q<H&&!mask[q]){a+=rc[q];c++}}sm[y]=c?a/c:0;mx=Math.max(mx,sm[y])}
-  const thr=mx*.04;let best=[0,H-1],s=-1,bl=0;for(let y=0;y<=H;y++){if(y<H&&sm[y]>thr){if(s<0)s=y}else if(s>=0){let tot=0;for(let q=s;q<y;q++)tot+=rc[q];if(tot>bl){bl=tot;best=[s,y-1]}s=-1}}
-  for(let y=0;y<H;y++)if(y<best[0]-8||y>best[1]+8)mask[y]=1}
+  /* runs of busy rows; runs separated by a short gap are one band (a fast candle can leave a thin stretch between them) */
+  const thr=mx*.04,runs=[];let s=-1;for(let y=0;y<=H;y++){if(y<H&&sm[y]>thr){if(s<0)s=y}else if(s>=0){runs.push([s,y-1]);s=-1}}
+  const mg=[],gapMax=0;for(const r of runs){const l=mg[mg.length-1];if(l&&r[0]-l[1]<=gapMax)l[1]=r[1];else mg.push([...r])}
+  let best=[0,H-1],bl=0;for(const [a,b] of mg){let tot=0;for(let q=a;q<=b;q++)tot+=rc[q];if(tot>bl){bl=tot;best=[a,b]}}
+  for(let y=0;y<H;y++)if(y<best[0]-8||y>best[1]+8)band[y]=0}
  const seg=[],occ=new Float32Array(w);for(let x=0;x<w;x++){let best=null,cur=null,gap=0;
   for(let y=y0;y<y1;y++){const c=mask[y-y0]?0:cls[y*w+x];
-   if(c===1||c===2){occ[x]++;if(cur&&cur.c===c&&gap<=1){cur.b=y;gap=0}else{cur={c,t:y,b:y};gap=0}if(!best||cur.b-cur.t>best.b-best.t)best=cur}
+   if(c===1||c===2){if(band[y-y0])occ[x]++;if(cur&&cur.c===c&&gap<=1){cur.b=y;gap=0}else{cur={c,t:y,b:y};gap=0}const sc=q=>q.b-q.t+(band[((q.t+q.b)>>1)-y0]?1e4:0);if(!best||sc(cur)>sc(best))best=cur}
    else if(cur){gap++;if(gap>1)cur=null}}
   seg[x]=best?{...best}:null}
  /* flat coloured boxes (price labels, buttons) are not candles: blank them */
@@ -2120,7 +2123,15 @@ function rdSplit(D,ya,yb){ya=ya||0;const {w,h,cls}=D;yb=yb||h;const row=new Floa
  const lo=ya+(yb-ya)*.2,hi=ya+(yb-ya)*.85;let best=[(ya+yb)/2,0],s=-1;for(let y=Math.floor(lo);y<=Math.ceil(hi);y++){if(y<hi&&sm[y]<=thr){if(s<0)s=y}else if(s>=0){if(y-s>best[1])best=[(s+y)/2,y-s];s=-1}}return Math.round(best[0])}
 function rdPair(P,V,wP,wV,same){const out=[];if(!P.length||!V.length)return out;
  if(same||Math.abs(wP-wV)/Math.max(wP,wV)<.04){const sc=same?1:wP/wV,per=P.per||4;let j=0;
-  for(const p of P){while(j<V.length-1&&V[j+1].x*sc<=p.x)j++;let best=null;for(const q of [V[j],V[j+1]])if(q&&Math.abs(q.x*sc-p.x)<=per*.6&&(!best||Math.abs(q.x*sc-p.x)<Math.abs(best.x*sc-p.x)))best=q;if(best)out.push([p,best])}}
+  /* a photo taken at a slight angle shifts one window against the other a little more towards one side, so the match is
+     refined: fit CVD position = a × price position + b on the pairs found, then pair again with that fit */
+  let A=sc,B=0;const pairOnce=()=>{const o=[];let j=0;for(const p of P){const tx=q=>q.x*A+B;while(j<V.length-1&&tx(V[j+1])<=p.x)j++;let best=null;for(const q of [V[j],V[j+1]])if(q&&Math.abs(tx(q)-p.x)<=per*.6&&(!best||Math.abs(tx(q)-p.x)<Math.abs(tx(best)-p.x)))best=q;if(best&&!(o.length&&o[o.length-1][1]===best))o.push([p,best])}return o};
+  /* a slightly rotated photo shifts the CVD window sideways against price, sometimes by a whole candle. Try shifts and
+     keep the one where the candle colours agree most: a green price candle usually sits over a rising CVD bar */
+  {let bs=-1e9,bb=0;for(let b0=-2.5*per;b0<=2.5*per;b0+=per/4){B=b0;const o=pairOnce();let s=0;for(const [p,q] of o)if(p.c&&q.c)s+=p.c===q.c?1:-1;s+=o.length*.25;if(s>bs+1e-9||(Math.abs(s-bs)<1e-9&&Math.abs(b0)<Math.abs(bb))){bs=s;bb=b0}}B=bb}
+  let cur=pairOnce();for(let it=0;it<3&&cur.length>=8;it++){const n=cur.length;let sx=0,sy=0,sxx=0,sxy=0;for(const [p,q] of cur){sx+=q.x;sy+=p.x;sxx+=q.x*q.x;sxy+=q.x*p.x}const den=n*sxx-sx*sx;if(!den)break;
+   const a2=(n*sxy-sx*sy)/den,b2=(sy-a2*sx)/n;if(Math.abs(a2/sc-1)>.15)break;A=a2;B=b2;const nx=pairOnce();if(nx.length<cur.length)break;cur=nx}
+  out.push(...cur)}
  else{const n=Math.min(P.length,V.length);for(let k=0;k<n;k++)out.push([P[P.length-n+k],V[V.length-n+k]])}
  return out}
 function rdPivots(c,k,per){const n=c.length,pv=[];per=per||1;
@@ -2157,7 +2168,8 @@ async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
    const pp=rdPrep(D,0,RD.split),pv=rdPrep(D,RD.split,D.h),a=rdPeriod(pp.occ),b=rdPeriod(pv.occ),per=(a.conf>=b.conf?a:b).per;RD.dbg={a,b};
    const gP=rdGrid(D,0,RD.split,per,pp),gV=rdGrid(D,RD.split,D.h,per,pv),bP=rdCandles(D,0,RD.split),bV=rdCandles(D,RD.split,D.h,bP.per);
    const gPr=rdPair(gP,gV,D.w,D.w,true),bPr=rdPair(bP,bV,D.w,D.w,true),q=(pr,P)=>pr.length<12||!P.per?0:pr.length/Math.max(pr.length,(P[P.length-1].x-P[0].x)/P.per+1);
-   const regOf=C=>{if(!C||C.length<12||!C.per)return 0;let k=0;for(let i=1;i<C.length;i++){const d=C[i].x-C[i-1].x;if(Math.abs(d-C.per)<=C.per*.25)k++}return k/(C.length-1)};RD.reg=[regOf(bP),regOf(bV)];const useG=gPr.length>=12&&(bPr.length<12||Math.min(regOf(bP),regOf(bV))<.7);RD.cP=useG?gP:bP;RD.cV=useG?gV:bV;RD.pairs=useG?gPr:bPr;RD.method=useG?'grid':'blob'}
+   const regOf=C=>{if(!C||C.length<12||!C.per)return 0;let k=0;for(let i=1;i<C.length;i++){const d=C[i].x-C[i-1].x;if(Math.abs(d-C.per)<=C.per*.25)k++}return k/(C.length-1)};RD.reg=[regOf(bP),regOf(bV)];/* blobs when they come out evenly spaced; otherwise the grid, unless the grid lines up far fewer candles in both windows */
+   const rb=Math.min(regOf(bP),regOf(bV)),nb=bPr.length,ng=gPr.length;RD.cmp=[ng,nb,+rb.toFixed(2)];const useG=ng>=12&&(nb<12||(rb<.7&&ng>=nb*.8));RD.cP=useG?gP:bP;RD.cV=useG?gV:bV;RD.pairs=useG?gPr:bPr;RD.method=useG?'grid':'blob'}
   else{const DP=rdClassify(rdData(RD.P,1400)),DV=rdClassify(rdData(RD.V,1400));RD.DP=DP;RD.DV=DV;const pp=rdPrep(DP,0,DP.h),pv=rdPrep(DV,0,DV.h),a=rdPeriod(pp.occ),b=rdPeriod(pv.occ),pa=a.conf>=b.conf?a.per:b.per*DP.w/DV.w;
    const gP=rdGrid(DP,0,DP.h,pa,pp),gV=rdGrid(DV,0,DV.h,pa*DV.w/DP.w,pv),bP=rdCandles(DP,0,DP.h),bV=rdCandles(DV,0,DV.h,bP.per&&bP.per*DV.w/DP.w);
    const gPr=rdPair(gP,gV,DP.w,DV.w,false),bPr=rdPair(bP,bV,DP.w,DV.w,false),q=(pr,P)=>pr.length<12||!P.per?0:pr.length/Math.max(pr.length,(P[P.length-1].x-P[0].x)/P.per+1);
@@ -2776,7 +2788,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795743978';
+window.APPV='1795745719';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
