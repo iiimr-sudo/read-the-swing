@@ -130,6 +130,16 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .lkres{border-top:1px solid var(--line);margin-top:6px;padding-top:8px}.lkres p{margin:6px 0;font-size:15px}.lkfig{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0}.lkfig svg{display:block;width:100%;height:auto}
 .pastebox{min-height:64px;border:1px dashed var(--ink);background:var(--card);padding:8px;font-size:14px;color:var(--mut);outline:none;overflow:hidden;-webkit-user-select:text;user-select:text}.pastebox:empty::before{content:attr(data-ph);color:var(--mut);letter-spacing:.04em}.pastebox:focus{border-style:solid;box-shadow:0 0 0 2px var(--gold)}.pastebox img{max-width:100%;max-height:60px}
 .rdbox{position:absolute;display:none;border:2px dashed var(--gold);background:rgba(224,173,37,.15);pointer-events:none}
+.rdpics{position:relative}
+.rdlean{position:absolute;top:14px;right:14px;z-index:2;width:30%;max-width:150px;background:rgba(30,29,25,.86);color:#e8e2cf;border:1px solid rgba(232,226,207,.35);padding:8px 10px 9px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;backdrop-filter:blur(2px)}
+.rdlean svg{width:44px;height:44px;overflow:visible;fill:none;stroke:var(--gold);stroke-width:4;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 4px rgba(224,173,37,.8))}
+.rdlean.l3 svg{animation:leanpulse 1.8s ease-in-out infinite}.rdlean.l1 svg{opacity:.6;filter:none}.rdlean.fl svg{stroke:#e8e2cf;filter:none;opacity:.8}
+.rdlean b{font:700 16px 'Saira Semi Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase}
+.rdlean .firm{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}.rdlean .why{font-size:11.5px;line-height:1.3;color:#cfc8b2}
+.rdlean .rdx{position:absolute;top:2px;right:4px;background:none;border:0;color:#cfc8b2;font-size:16px;line-height:1;padding:2px;cursor:pointer}
+.rdlean.mini{width:auto;padding:5px 10px;font:700 12px 'Saira Semi Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;color:var(--gold)}
+@keyframes leanpulse{0%,100%{filter:drop-shadow(0 0 3px rgba(224,173,37,.6))}50%{filter:drop-shadow(0 0 10px rgba(224,173,37,1))}}
+@media (prefers-reduced-motion:reduce){.rdlean svg{animation:none}}
 .rdpics canvas{display:block;width:100%;height:auto;margin-top:4px}.rdpics{padding:8px}
 
 .pf{display:grid;gap:6px}.pf>div{position:relative;min-width:0}.pft{position:absolute;left:6px;top:3px;font:700 10px 'Saira Semi Condensed',sans-serif;letter-spacing:.16em;color:var(--ink);opacity:.7;z-index:1}
@@ -2157,6 +2167,24 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
  if(RD.mode==='one'&&RD.crop){const c=RD.crop;x.strokeStyle='#e8e2cf';x.lineWidth=2*u;x.setLineDash([10*u,6*u]);x.strokeRect(c.x0*D.w,c.y0*D.h,(c.x1-c.x0)*D.w,(c.y1-c.y0)*D.h);x.setLineDash([])}
  if(RD.mode==='one'){x.strokeStyle='rgba(224,173,37,.8)';x.setLineDash([8*u,6*u]);x.lineWidth=1.5*u;x.beginPath();x.moveTo(0,RD.split);x.lineTo(D.w,RD.split);x.stroke();x.setLineDash([])}
  return c}
+/* the lean, as a small card in the picture's top-right corner: which way the read points and how firmly.
+   Firmness comes from the rules of the read, not from statistics: both sides agreeing is firm, one divergence deciding is
+   moderate, the latest swing breaking a tie is weak */
+function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" data-rdlean="1" aria-label="Show the lean">Lean</button>`;
+ let lean=0,lvl=0,why='';
+ if(ov){lean=ov.lean;if(!lean){why='Highs and lows cancel out';lvl=0}
+  else if(!ov.conflict){lvl=3;why=st&&st.read.cat!=='none'?st.read.name:'Highs and lows agree'}
+  else if(ov.by==='form'){lvl=2;why=st.read.name}
+  else if(ov.by==='div'){lvl=2;why=(ov.div.t==='hi'?'The highs':'The lows')+' show '+CAT[ov.div.cat].n.toLowerCase()}
+  else{lvl=1;why='Highs and lows disagree; the latest swing leads'}}
+ else{const c=o.H||o.L;if(!c)return '';lean=c.lean;lvl=lean?1:0;why=(c.t==='hi'?'Only the highs':'Only the lows')+' could be read'}
+ const lv2=[o.H2,o.L2].filter(Boolean),big=lv2.length&&lean?(lv2.some(c=>c.lean&&c.lean!==lean)?' The bigger picture disagrees.':lv2.some(c=>c.lean===lean)?' The bigger picture agrees.':''):'';
+ const ang=lean?(lean>0?-1:1)*[0,25,45,90][lvl]:0,word=lean?(lean>0?'Up':'Down'):'Sideways',firm=['','Weak','Moderate','Firm'][lvl];
+ const arrow=lean?`<g transform="rotate(${ang})"><line x1="-15" y1="0" x2="13" y2="0"/><path d="M5 -9 L16 0 L5 9"/></g>`:`<line x1="-14" y1="0" x2="14" y2="0"/><path d="M-6 -7 L-15 0 L-6 7 M6 -7 L15 0 L6 7"/>`;
+ /* it sits on the divider between price and CVD, where there are no candles */
+ const pos=RD.mode==='one'&&RD.D1&&RD.split?`style="top:calc(8px + ${(RD.split/RD.D1.h*100).toFixed(1)}%);transform:translateY(-50%)"`:'';
+ return `<div class="rdlean l${lvl} ${lean>0?'up':lean<0?'dn':'fl'}" ${pos}><button class="rdx" data-rdlean="0" aria-label="Hide">×</button><svg viewBox="-22 -22 44 44" aria-hidden="true">${arrow}</svg>
+  <b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}<span class="why">${why}.${big}</span></div>`}
 function rdLine(c,lab){if(!c)return '';const e=G[c.t][c.pk+'|'+c.ck],id=`${c.t}:${c.pk}|${c.ck}`,de=DEX[DEXI[id]],pc=d=>Math.abs(Math.round(d*100))+'%';
  return `<div class="lab">${lab}</div><p>Price <b>${WORD[c.pk].toLowerCase()}</b> (${pc(c.dP)} of the pullback), CVD <b>${WORD[c.ck].toLowerCase()}</b> (${pc(c.dV)}). <b>${e.n}</b>: ${CAT[c.cat].n.toLowerCase()}, ${c.lean>0?'leans up':c.lean<0?'leans down':'no lean'}.${[c.dP,c.dV].some(d=>Math.abs(d)>=.07&&Math.abs(d)<=.13)?' One of these sits right at the 10% line, so it could read either way.':''}</p><p class="m">${e.read}</p>
  <div class="row"><button class="btn" data-dx="${DEXI[id]}">${no3(de.no)} in the book</button><button class="btn" data-rdrill="${DEXI[id]}">Practise this</button></div>`}
@@ -2171,7 +2199,7 @@ function scanScreen(){const o=RD.out;
  if(RD.busy)body='<div class="panel"><p class="q">Reading the picture…</p></div>';
  else if(RD.err)body=`<div class="panel"><p class="verdict no" style="font-size:20px">Couldn't read it</p><p>${RD.err}</p>${RD.mode==='one'&&RD.D1?`<div class="panel rdpics" id="rdpics"></div><button class="btn wide" data-rdcrop="1" aria-pressed="${!!RD.cropping}">${RD.cropping?'Drag a box around the candles…':'Mark the chart area'}</button>`:''}</div>`;
  else if(o){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?structLean(st&&st.read,[o.H,o.L].map(c=>({...c,k:c.b}))):null;
-  body=`<div class="panel rdpics" id="rdpics"></div>
+  body=`<div class="panel rdpics" id="rdpics">${rdLeanBox(o,st,ov)}</div>
   <div class="lab">Swing size</div>${`<div class="row seg">${[['0','Small'],['1','Medium'],['2','Large']].map(([v,l])=>`<button class="btn" data-rdsz="${v}" aria-pressed="${RD.size==+v}">${l}</button>`).join('')}</div>`}
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rdall="0" aria-pressed="${!RD.all}">Latest highs and lows</button><button class="btn" data-rdall="1" aria-pressed="${RD.all}">Every swing</button></div>
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rddots="1" aria-pressed="${!!RD.dots}">Show the candles it found</button></div>
@@ -2211,6 +2239,7 @@ function scanScreen(){const o=RD.out;
   else if(b.dataset.rdsz!==undefined){RD.size=+b.dataset.rdsz;RD.out=rdAnalyse();scanScreen()}
   else if(b.dataset.rdall!==undefined){RD.all=b.dataset.rdall==='1';scanScreen()}
   else if(b.dataset.rddots){RD.dots=!RD.dots;scanScreen()}
+  else if(b.dataset.rdlean){RD.hideLean=b.dataset.rdlean==='0';scanScreen()}
   else if(b.dataset.rdcrop==='clear'){RD.crop=null;RD.cropping=false;RD.split=null;go()}
   else if(b.dataset.rdcrop){RD.cropping=!RD.cropping;scanScreen();if(RD.cropping){const pc=$('#rdpics');pc&&pc.scrollIntoView({block:'center',behavior:'smooth'})}}
   else if(b.dataset.dx!==undefined){DV.i=+b.dataset.dx;DV.seed=0;setTab('dex')}
@@ -2680,7 +2709,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795742670';
+window.APPV='1795743595';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
