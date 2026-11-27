@@ -133,11 +133,12 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 
 .pf{display:grid;gap:6px}.pf>div{position:relative;min-width:0}.pft{position:absolute;left:6px;top:3px;font:700 10px 'Saira Semi Condensed',sans-serif;letter-spacing:.16em;color:var(--ink);opacity:.7;z-index:1}
 .pf svg{display:block}.pfp,.pfv,.pfprof{border:1px solid var(--line);background:var(--pane);overflow:hidden}
-.pf.port{grid-template-columns:34% 1fr;grid-template-areas:"rot rot" "prof p" "leg v" "panel panel";grid-template-rows:auto 250px 150px auto}
-.pf.land{grid-template-columns:27% 1fr 31%;grid-template-areas:"bar bar bar" "prof p panel" "leg v panel";grid-template-rows:auto 1fr 36%;height:calc(100vh - 14px);height:calc(100dvh - 14px)}
+.pf.port{grid-template-columns:34% minmax(0,1fr);grid-template-areas:"rot rot" "prof p" "prof v" "panel panel";grid-template-rows:auto 250px 160px auto}
+.pf.land{grid-template-columns:27% minmax(0,1fr) 31%;grid-template-areas:"bar bar bar" "prof p panel" "prof v panel";grid-template-rows:auto minmax(0,1fr) minmax(0,40%);height:calc(100vh - 14px);height:calc(100dvh - 14px)}
+.pfp>svg,.pfv>svg,.pfprof>svg{position:absolute;left:0;top:0}
 .pf .rotate{grid-area:rot;margin:0;font-size:13.5px;color:var(--mut)}.pfbar{grid-area:bar;display:flex;align-items:center;gap:12px;font-size:13px}.pfbar b{font:700 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase}.pfbar .btn{margin-left:auto;min-height:30px;font-size:12px;padding:0 12px}.pfbar .btn::before{display:none}
-.pfprof{grid-area:prof}.pfp{grid-area:p}.pfv{grid-area:v}.pfleg{grid-area:leg;font:700 13px 'Saira Semi Condensed',sans-serif;letter-spacing:.2em;padding:6px 2px;color:var(--ink)}.pfleg span{font:400 11px inherit;letter-spacing:.02em;color:var(--mut)}
-.pfpanel{grid-area:panel;overflow-y:auto;padding:2px 2px 8px}.pfpanel .q{font-size:17px;margin:4px 0 8px}.pfpanel .m{font-size:13.5px;margin:4px 0 8px}
+.pfprof{grid-area:prof}.pfp{grid-area:p}.pfv{grid-area:v}.pfbar .pfleg{font-size:12px;color:var(--mut)}@media(max-width:760px){.pfbar .pfleg{display:none}}
+.pfpanel{grid-area:panel;overflow-y:auto;min-height:0;padding:2px 2px 8px}.pfpanel .q{font-size:17px;margin:4px 0 8px}.pfpanel .m{font-size:13.5px;margin:4px 0 8px}
 .pfopts{display:grid;gap:6px}.pfopts .btn{min-height:44px;font-size:12.5px;text-align:left;justify-content:flex-start;line-height:1.25;padding:6px 10px 6px 26px;letter-spacing:.03em;text-transform:none}
 .pftab{margin:4px 0 8px}.pftab>div{border-top:1px solid var(--line);padding:6px 2px;font-size:13px;line-height:1.3}.pftab span{display:block}.pftab b{display:block;font-size:13px;color:var(--olive)}.pftab .lost b{color:var(--rust)}
 body.pfland .status,body.pfland nav.tabs,body.pfland .rule{display:none}body.pfland .app{max-width:none;padding:6px max(10px,env(safe-area-inset-left)) 6px max(10px,env(safe-area-inset-left))}
@@ -2199,7 +2200,7 @@ function pfChart(R,w,W,H,upto,marks){const C=R[w],all=w==='P'?R.P:R.V;let mn=Inf
  for(const m of marks.segs||[])if(m.w===w){const y1=Y(m.v1),y2=Y(m.v2);s+=`<line x1="${X(m.i)}" y1="${y1}" x2="${X(m.j)}" y2="${y2}" stroke="${INK}" stroke-width="5" opacity=".6"/><line x1="${X(m.i)}" y1="${y1}" x2="${X(m.j)}" y2="${y2}" stroke="${HL}" stroke-width="3"/><text x="${(X(m.i)+X(m.j))/2}" y="${(y1+y2)/2+(m.below?16:-7)}" text-anchor="middle" font-size="11" font-weight="700" fill="${INK}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${m.t}</text>`}
  for(const m of marks.pts||[])if(m.w===w){const x=X(m.i),y=Y(m.v);s+=`<circle cx="${x}" cy="${y}" r="5" fill="${m.col||HL}" stroke="${INK}" stroke-width="1.5"/>`+(m.t?`<text x="${x}" y="${y+(m.below?17:-9)}" text-anchor="middle" font-size="10" font-weight="700" fill="${INK}" style="paint-order:stroke;stroke:${PANE};stroke-width:3px">${m.t}</text>`:'')}
  return {svg:`<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${s}</svg>`,Y,mn,mx}}
-function pfProfileSvg(R,W,H,upto,Y,showTop){const {rows,label,single,edge}=pfTop(R,upto),ks=[...rows.keys()],hi=R.side==='hi';let s=`<rect width="${W}" height="${H}" fill="${PANE}"/>`;
+function pfProfileSvg(R,W,H,upto,c,showTop){const Y=v=>10+(c.mx-v)/(c.mx-c.mn)*(H-20);const {rows,label,single,edge}=pfTop(R,upto),ks=[...rows.keys()],hi=R.side==='hi';let s=`<rect width="${W}" height="${H}" fill="${PANE}"/>`;
  const rh=Math.abs(Y(0)-Y(1)),bw=Math.max(6,Math.min(16,(W-44)/10));
  for(const b of ks){const y0=Y(b+1),ps=[...rows.get(b)].sort((a,b)=>a-b);s+=`<line x1="40" x2="${W}" y1="${y0}" y2="${y0}" stroke="${GRID}"/>`;
   if(b%3===0)s+=`<text x="36" y="${y0+rh*.75}" text-anchor="end" font-size="8.5" fill="${INK}" opacity=".65">${pfPx(R,b).replace(/\.00$/,'')}</text>`;
@@ -2228,10 +2229,11 @@ function pfLayout(){const land=matchMedia('(orientation: landscape)').matches&&i
 function pfScreen(){if(!PF.st)PF.st=pfNew();const R=PF.st,land=pfLayout(),steps=pfSteps(R);while(R.step<steps.length&&steps[R.step].cond&&!steps[R.step].cond(R.ans))R.step++;
  const cur=steps[R.step],done=R.step>=steps.length&&R.vis>=R.n;
  $('#screen').innerHTML=`<div class="pf ${land?'land':'port'}">
-  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><button class="btn" id="pfexit">Exit</button></div>`:`<p class="rotate">Turn your phone sideways for the full view.</p>`}
-  <div class="pfprof" id="pfprof"></div><div class="pfp" id="pfp"></div><div class="pfleg">${PFL.slice(0,R.n/PFN).split('').map((l,i)=>i<Math.ceil(R.vis/PFN)?l:'').join(' ')}<br><span>each letter: one 30-minute period</span></div><div class="pfv" id="pfv"></div>
+  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><span class="pfleg">A–J: one letter per 30-minute period</span><button class="btn" id="pfexit">Exit</button></div>`:`<p class="rotate">Turn your phone sideways for the full view. Letters A–J: one per 30-minute period.</p>`}
+  <div class="pfprof" id="pfprof"></div><div class="pfp" id="pfp"></div><div class="pfv" id="pfv"></div>
   <div class="pfpanel" id="pfpanel"></div></div>`;
  if($('#pfexit'))$('#pfexit').onclick=()=>{SFX.click();setTab('road')};
+ if(window.ResizeObserver){if(PF.ro)PF.ro.disconnect();PF.ro=new ResizeObserver(()=>{cancelAnimationFrame(PF.raf);PF.raf=requestAnimationFrame(()=>{if(TAB==='prof')pfDraw()})});for(const s of ['#pfp','#pfv','#pfprof'])PF.ro.observe($(s))}
  pfDraw();pfPanel()}
 function pfMarks(R){const hi=R.side==='hi',m={lines:[],segs:[],pts:[]},A=R.ans,ci=(w,a,b,f)=>{let best=a;for(let i=a;i<b;i++)if(f(R[w][i],R[w][best]))best=i;return best},hiF=(x,y)=>hi?x.h>y.h:x.l<y.l;
  if(A[0]!==undefined){const i1=ci('P',2*PFN,3*PFN,hiF),i2=ci('P',4*PFN,5*PFN,hiF),v1=ci('V',2*PFN,3*PFN,hiF),v2=ci('V',4*PFN,5*PFN,hiF),g=k=>hi?k.h:k.l;
@@ -2241,9 +2243,9 @@ function pfMarks(R){const hi=R.side==='hi',m={lines:[],segs:[],pts:[]},A=R.ans,c
  if(R.vis>=R.n){const pl=pfPlans(R);m.lines.push({w:'P',v:R.H2,t:`equal ${hi?'highs':'lows'} ${pfPx(R,R.H2)}`,dash:'5 4',col:INK,sw:1.2,below:!hi});if(!R.brk)m.lines.push({w:'P',v:R.tail,t:`tail ${pfPx(R,R.tail)}`,dash:'2 3',col:OR,sw:1.2,below:!hi});
   m.pts.push({w:'P',i:R.d1-1,v:pl[0].entry,t:'1st signal',col:HOLLOW,below:hi});if(!R.brk)m.pts.push({w:'P',i:R.d2-1,v:pl[2].entry,t:'after repair',col:HL,below:hi})}
  return m}
-function pfDraw(){const R=PF.st,pp=$('#pfp'),pv=$('#pfv'),pr=$('#pfprof');if(!pp)return;const W=pp.clientWidth,H=pp.clientHeight,Wv=pv.clientWidth,Hv=pv.clientHeight,mk=pfMarks(R);
+function pfDraw(){const R=PF.st,pp=$('#pfp'),pv=$('#pfv'),pr=$('#pfprof');if(!pp||!PF.st)return;const W=Math.max(60,pp.clientWidth),H=Math.max(60,pp.clientHeight),Wv=Math.max(60,pv.clientWidth),Hv=Math.max(40,pv.clientHeight),mk=pfMarks(R);
  const c=pfChart(R,'P',W,H,R.vis,mk);pp.innerHTML=`<span class="pft">PRICE</span>`+c.svg;pv.innerHTML=`<span class="pft">CVD</span>`+pfChart(R,'V',Wv,Hv,R.vis,mk).svg;
- const lab=R.ans[3]!==undefined||(R.ans[1]!==undefined&&R.vis<R.d2+1&&R.vis<=R.d1);pr.innerHTML=`<span class="pft">PROFILE</span>`+pfProfileSvg(R,pr.clientWidth,H,R.vis,c.Y,lab)}
+ const lab=R.ans[3]!==undefined||(R.ans[1]!==undefined&&R.vis<R.d2+1&&R.vis<=R.d1);pr.innerHTML=`<span class="pft">PROFILE</span>`+pfProfileSvg(R,pr.clientWidth,pr.clientHeight,R.vis,c,lab)}
 function pfPanel(){const R=PF.st,el=$('#pfpanel'),steps=pfSteps(R);if(!el)return;const cur=steps[R.step];
  if(R.busy){el.innerHTML='<p class="m">Playing out…</p>';return}
  if(cur&&R.vis>=cur.at){el.innerHTML=`${R.note?`<p class="m">${R.note}</p>`:''}<p class="q">${cur.q}</p><div class="pfopts">${cur.o.map(([v,t])=>`<button class="btn" data-pf="${v}">${t}</button>`).join('')}</div>`;
@@ -2259,7 +2261,8 @@ function pfPanel(){const R=PF.st,el=$('#pfpanel'),steps=pfSteps(R);if(!el)return
   <p class="m">Profile rounds: ${S.pf.r} · right answers ${S.pf.ok}</p><button class="btn wide" id="pfnext">Next round</button>`;
  $('#pfnext').onclick=()=>{SFX.round();PF.st=pfNew();pfScreen()}}
 function pfPlay(to,done){const R=PF.st,tick=()=>{if(TAB!=='prof'||PF.st!==R)return;if(R.vis>=to){done();return}R.vis++;pfDraw();if(R.vis%PFN===0)SFX.tick();setTimeout(tick,110)};setTimeout(tick,250)}
-addEventListener('resize',()=>{if(TAB==='prof'&&PF.st){const was=document.body.classList.contains('pfland');if(pfLayout()!==was)pfScreen();else pfDraw()}});
+const pfRe=()=>{if(TAB==='prof'&&PF.st){const was=document.body.classList.contains('pfland');if(pfLayout()!==was)pfScreen();else pfDraw()}};
+addEventListener('resize',pfRe);addEventListener('orientationchange',()=>{setTimeout(pfRe,120);setTimeout(pfRe,450)});
 
 /* ---------- account save: when the game is opened from claude.ai, progress lives in your account ----------
    so the same progress shows on the computer and on the phone. The file copy keeps saving on the device only. */
@@ -2599,7 +2602,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795739447';
+window.APPV='1795739651';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
