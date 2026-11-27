@@ -137,7 +137,13 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .pf.port{grid-template-columns:34% minmax(0,1fr);grid-template-areas:"rot rot" "prof p" "prof v" "panel panel";grid-template-rows:auto 250px 160px auto}
 .pf.land{grid-template-columns:27% minmax(0,1fr) 31%;grid-template-areas:"bar bar bar" "prof p panel" "prof v panel";grid-template-rows:auto minmax(0,1fr) minmax(0,40%);height:calc(100vh - 14px);height:calc(100dvh - 14px)}
 .pfp>svg,.pfv>svg,.pfprof>svg{position:absolute;left:0;top:0}
-.pf .rotate{grid-area:rot;margin:0;font-size:13.5px;color:var(--mut)}.pfbar{grid-area:bar;display:flex;align-items:center;gap:12px;font-size:13px}.pfbar b{font:700 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase}.pfbar .btn{margin-left:auto;min-height:30px;font-size:12px;padding:0 12px}.pfbar .btn::before{display:none}
+.pf .rotate{grid-area:rot;margin:0;font-size:13.5px;color:var(--mut);display:flex;align-items:center;gap:12px}.pf .rotate p{margin:0}.pf .rotate b{color:var(--ink)}
+.rotph{flex:none;width:52px;height:52px;overflow:visible;fill:none;stroke:var(--gold);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 3px rgba(224,173,37,.9)) drop-shadow(0 0 9px rgba(224,173,37,.55));animation:rotglow 2.6s ease-in-out infinite}
+.rotph circle{fill:var(--gold);stroke:none}.rotph .rotg{transform-origin:0 0;animation:rotturn 2.6s cubic-bezier(.6,0,.3,1) infinite}.rotph .rota{opacity:.85;animation:rotarr 2.6s ease-in-out infinite}
+@keyframes rotturn{0%,18%{transform:rotate(0)}45%,78%{transform:rotate(90deg)}100%{transform:rotate(0)}}
+@keyframes rotglow{0%,100%{filter:drop-shadow(0 0 2px rgba(224,173,37,.7)) drop-shadow(0 0 6px rgba(224,173,37,.35))}50%{filter:drop-shadow(0 0 4px rgba(224,173,37,1)) drop-shadow(0 0 14px rgba(224,173,37,.7))}}
+@keyframes rotarr{0%,15%{opacity:.9}40%,85%{opacity:.15}100%{opacity:.9}}
+@media (prefers-reduced-motion:reduce){.rotph,.rotph .rotg,.rotph .rota{animation:none}}.pfbar{grid-area:bar;display:flex;align-items:center;gap:12px;font-size:13px}.pfbar b{font:700 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase}.pfbar .btn{margin-left:auto;min-height:30px;font-size:12px;padding:0 12px}.pfbar .btn::before{display:none}
 .pfprof{grid-area:prof}.pfp{grid-area:p}.pfv{grid-area:v}.pfbar .pfleg{font-size:12px;color:var(--mut)}@media(max-width:760px){.pfbar .pfleg{display:none}}
 .pfpanel{grid-area:panel;overflow-y:auto;min-height:0;padding:2px 2px 8px}.pfpanel .q{font-size:17px;margin:4px 0 8px}.pfpanel .m{font-size:13.5px;margin:4px 0 8px}
 .pfopts{display:grid;gap:6px}.pfopts .btn{min-height:44px;font-size:12.5px;text-align:left;justify-content:flex-start;line-height:1.25;padding:6px 10px 6px 26px;letter-spacing:.03em;text-transform:none}
@@ -2263,7 +2269,7 @@ function pfLayout(){const land=matchMedia('(orientation: landscape)').matches&&i
 function pfScreen(){if(!PF.st)PF.st=pfNew();const R=PF.st,land=pfLayout(),steps=pfSteps(R);while(R.step<steps.length&&steps[R.step].cond&&!steps[R.step].cond(R.ans))R.step++;
  const cur=steps[R.step],done=R.step>=steps.length&&R.vis>=R.n;
  $('#screen').innerHTML=`<div class="pf ${land?'land':'port'}">
-  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><span class="pfleg">A–J: one letter per 30-minute period</span><button class="btn" id="pfexit">Exit</button></div>`:`<p class="rotate">Turn your phone sideways for the full view. Letters A–J: one per 30-minute period.</p>`}
+  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><span class="pfleg">A–J: one letter per 30-minute period</span><button class="btn" id="pfexit">Exit</button></div>`:`<div class="rotate">${matchMedia('(pointer: coarse)').matches?`<svg class="rotph" viewBox="-30 -30 60 60" aria-hidden="true"><g class="rotg"><rect x="-10" y="-17" width="20" height="34" rx="3.5"/><line x1="-4" y1="-13" x2="4" y2="-13"/><circle cx="0" cy="12.5" r="1.6"/></g><path class="rota" d="M 17 -19 A 25 25 0 0 1 24 -6"/><path class="rota" d="M 24 -6 l -5 -2 M 24 -6 l 1.5 -5"/></svg>`:''}<p><b>Turn your phone sideways</b> for the full view. Letters A–J: one per 30-minute period.</p></div>`}
   <div class="pfprof" id="pfprof"></div><div class="pfp" id="pfp"></div><div class="pfv" id="pfv"></div>
   <div class="pfpanel" id="pfpanel"></div></div>`;
  if($('#pfexit'))$('#pfexit').onclick=()=>{SFX.click();setTab('road')};
@@ -2636,7 +2642,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795740838';
+window.APPV='1795740916';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
