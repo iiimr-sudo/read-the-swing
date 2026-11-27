@@ -143,6 +143,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 @keyframes rotturn{0%,18%{transform:rotate(0)}45%,78%{transform:rotate(90deg)}100%{transform:rotate(0)}}
 @keyframes rotglow{0%,100%{filter:drop-shadow(0 0 2px rgba(224,173,37,.7)) drop-shadow(0 0 6px rgba(224,173,37,.35))}50%{filter:drop-shadow(0 0 4px rgba(224,173,37,1)) drop-shadow(0 0 14px rgba(224,173,37,.7))}}
 @keyframes rotarr{0%,15%{opacity:.9}40%,85%{opacity:.15}100%{opacity:.9}}
+@media (hover:hover) and (pointer:fine){.rotph{display:none}}
 @media (prefers-reduced-motion:reduce){.rotph,.rotph .rotg,.rotph .rota{animation:none}}.pfbar{grid-area:bar;display:flex;align-items:center;gap:12px;font-size:13px}.pfbar b{font:700 14px 'Saira Semi Condensed',sans-serif;letter-spacing:.14em;text-transform:uppercase}.pfbar .btn{margin-left:auto;min-height:30px;font-size:12px;padding:0 12px}.pfbar .btn::before{display:none}
 .pfprof{grid-area:prof}.pfp{grid-area:p}.pfv{grid-area:v}.pfbar .pfleg{font-size:12px;color:var(--mut)}@media(max-width:760px){.pfbar .pfleg{display:none}}
 .pfpanel{grid-area:panel;overflow-y:auto;min-height:0;padding:2px 2px 8px}.pfpanel .q{font-size:17px;margin:4px 0 8px}.pfpanel .m{font-size:13.5px;margin:4px 0 8px}
@@ -1960,8 +1961,17 @@ function rdData(img,maxW){const iw=img.naturalWidth||img.width,ih=img.naturalHei
  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,w,h);return {img,w,h,d:x.getImageData(0,0,w,h).data}}
 /* class map: 1 up colour, 2 down colour, 3 wick-like grey, 0 other */
 function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let i=0;i<w*h;i+=97){const k=i*4;vs.push(Math.max(d[k],d[k+1],d[k+2])/255)}vs.sort((a,b)=>a-b);const bg=vs[vs.length>>1],dark=bg<.5;
- for(let i=0;i<w*h;i++){const k=i*4,[hh,s,v]=rdHsv(d[k],d[k+1],d[k+2]);
-  if(s>.26&&v>.28&&hh>=70&&hh<=186)cls[i]=1;else if(s>.3&&v>.3&&(hh<=13||hh>=332))cls[i]=2;else if(s<.22&&Math.abs(v-bg)>.22&&(dark?v>bg:v<bg))cls[i]=3}
+ /* each pixel is compared with the background next to it on its row: the darkest pixel within a few candles either side
+    (the lightest on a light theme). A reflection of a hand, a lamp or a window adds light to everything there, background
+    included, so subtracting that background leaves only the candles; a broad coloured patch leaves nothing */
+ const R=Math.max(12,Math.round(w*.02)),env=new Int32Array(w),lum=new Float32Array(w),q=new Int32Array(w);
+ for(let y=0;y<h;y++){const o=y*w;for(let x=0;x<w;x++){const k=(o+x)*4,l=d[k]*.3+d[k+1]*.59+d[k+2]*.11;lum[x]=dark?l:-l}
+  /* sliding minimum with a deque: env[x] = position of the darkest pixel in [x-R, x+R] */
+  let qh=0,qt=0;for(let x=0;x<w+R;x++){if(x<w){while(qt>qh&&lum[q[qt-1]]>=lum[x])qt--;q[qt++]=x}const c=x-R;if(c>=0){while(q[qh]<c-R)qh++;env[c]=q[qh]}}
+  for(let x=0;x<w;x++){const i=o+x,k=i*4,ek=(o+env[x])*4,r=d[k],g=d[k+1],bl=d[k+2],er=d[ek],eg=d[ek+1],eb=d[ek+2],[hh,s,v]=rdHsv(r,g,bl),dd=Math.abs(r-er)+Math.abs(g-eg)+Math.abs(bl-eb);
+   if(s>.26&&v>.28&&hh>=70&&hh<=186){if(dd>40&&(g-r)-(eg-er)>18)cls[i]=1}
+   else if(s>.3&&v>.3&&(hh<=13||hh>=332)){if(dd>40&&(r-g)-(er-eg)>22)cls[i]=2}
+   else if(s<.22&&Math.abs(v-bg)>.22&&(dark?v>bg:v<bg)){if(dd>30)cls[i]=3}}}
  D.cls=cls;D.dark=dark;return D}
 /* a wick over a coloured background (a session box, a highlight): the pixel stands out from the background on both sides, and those two sides match each other */
 function rdWk(D,x,y,hw){const {w,d}=D;if(x-hw<0||x+hw>=w)return false;const p=(y*w+x)*4,l=(y*w+x-hw)*4,r=(y*w+x+hw)*4;
@@ -1984,7 +1994,7 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
   G.length=0;G.push(...out)}
  /* wicks drawn in grey (price candles on a dark theme): follow them from the body */
  for(const g of G){const xc=Math.round((g.x0+g.x1)/2);for(const x of [xc-1,xc,xc+1]){if(x<0||x>=w)continue;
-  const hw=Math.max(3,Math.round((g.x1-g.x0)/2+3)),ok=y=>{const c=cls[y*w+x];return c===3||c===g.c||rdWk(D,x,y,hw)};
+  const hw=Math.max(3,Math.round((g.x1-g.x0)/2+3)),ok=y=>{const c=cls[y*w+x];if(x-hw>=0&&x+hw<w&&(cls[y*w+x-hw]===g.c||cls[y*w+x+hw]===g.c))return false;return c===3||c===g.c||rdWk(D,x,y,hw)};
   let y=g.t-1,gap=0,top=g.t;while(y>=y0){if(ok(y)){top=y;gap=0}else if(++gap>1)break;y--}
   y=g.b+1;gap=0;let bot=g.b;while(y<y1){if(ok(y)){bot=y;gap=0}else if(++gap>1)break;y++}
   if(top<g.t&&g.t-top<(y1-y0)*.5)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.5)g.wb=Math.max(g.wb??g.b,bot)}
@@ -2039,7 +2049,7 @@ function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3
  const S=[];for(let xc=bp;xc<w;xc+=per){const a=Math.max(0,Math.round(xc-per*.3)),b=Math.min(w-1,Math.round(xc+per*.3));let t=1e9,bt=-1,nu=0,nd=0;
   for(let x=a;x<=b;x++){const s=seg[x];if(!s)continue;t=Math.min(t,s.t);bt=Math.max(bt,s.b);if(s.c===1)nu+=s.b-s.t+1;else nd+=s.b-s.t+1}
   if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(let x=a;x<=b;x++){const s=seg[x];if(s){cx+=x*(s.b-s.t+1);cw+=s.b-s.t+1}}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
-  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(3,Math.round(per*.42)),ok=y=>{const c=cls[y*w+x];return c===3||c===g.c||rdWk(D,x,y,hw)};
+  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(3,Math.round(per*.42)),ok=y=>{const c=cls[y*w+x];if(x-hw>=0&&x+hw<w&&(cls[y*w+x-hw]===g.c||cls[y*w+x+hw]===g.c))return false;return c===3||c===g.c||rdWk(D,x,y,hw)};
    let y=g.t-1,gap=0,top=g.t;while(y>=y0){if(ok(y)){top=y;gap=0}else if(++gap>1)break;y--}y=g.b+1;gap=0;let bot=g.b;while(y<y1){if(ok(y)){bot=y;gap=0}else if(++gap>1)break;y++}
    if(top<g.t&&g.t-top<(y1-y0)*.4)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.4)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b);S.push(g)}
@@ -2269,7 +2279,7 @@ function pfLayout(){const land=matchMedia('(orientation: landscape)').matches&&i
 function pfScreen(){if(!PF.st)PF.st=pfNew();const R=PF.st,land=pfLayout(),steps=pfSteps(R);while(R.step<steps.length&&steps[R.step].cond&&!steps[R.step].cond(R.ans))R.step++;
  const cur=steps[R.step],done=R.step>=steps.length&&R.vis>=R.n;
  $('#screen').innerHTML=`<div class="pf ${land?'land':'port'}">
-  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><span class="pfleg">A–J: one letter per 30-minute period</span><button class="btn" id="pfexit">Exit</button></div>`:`<div class="rotate">${matchMedia('(pointer: coarse)').matches?`<svg class="rotph" viewBox="-30 -30 60 60" aria-hidden="true"><g class="rotg"><rect x="-10" y="-17" width="20" height="34" rx="3.5"/><line x1="-4" y1="-13" x2="4" y2="-13"/><circle cx="0" cy="12.5" r="1.6"/></g><path class="rota" d="M 17 -19 A 25 25 0 0 1 24 -6"/><path class="rota" d="M 24 -6 l -5 -2 M 24 -6 l 1.5 -5"/></svg>`:''}<p><b>Turn your phone sideways</b> for the full view. Letters A–J: one per 30-minute period.</p></div>`}
+  ${land?`<div class="pfbar"><b>Profile</b><span>LV ${level(S.xp)} · ${S.xp} XP</span><span class="pfleg">A–J: one letter per 30-minute period</span><button class="btn" id="pfexit">Exit</button></div>`:`<div class="rotate">${`<svg class="rotph" width="52" height="52" viewBox="-30 -30 60 60" aria-hidden="true"><g class="rotg"><rect x="-10" y="-17" width="20" height="34" rx="3.5"/><line x1="-4" y1="-13" x2="4" y2="-13"/><circle cx="0" cy="12.5" r="1.6"/></g><path class="rota" d="M 17 -19 A 25 25 0 0 1 24 -6"/><path class="rota" d="M 24 -6 l -5 -2 M 24 -6 l 1.5 -5"/></svg>`}<p><b>Turn your phone sideways</b> for the full view. Letters A–J: one per 30-minute period.</p></div>`}
   <div class="pfprof" id="pfprof"></div><div class="pfp" id="pfp"></div><div class="pfv" id="pfv"></div>
   <div class="pfpanel" id="pfpanel"></div></div>`;
  if($('#pfexit'))$('#pfexit').onclick=()=>{SFX.click();setTab('road')};
@@ -2642,10 +2652,11 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795740916';
+window.APPV='1795741496';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
-if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+(()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
+if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 (()=>{const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),standalone=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
  if(standalone||localStorage.getItem('rts-hint-off'))return;
@@ -2654,7 +2665,8 @@ try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}ca
  const x=document.createElement('button');x.textContent='×';x.setAttribute('aria-label','Hide');x.onclick=()=>{b.remove();try{localStorage.setItem('rts-hint-off','1')}catch(e){}};b.appendChild(x);
  const app=document.querySelector('.app');app&&app.prepend(b)})();
 </script>
-<style>.installhint{position:relative;background:#4e4b42;color:#e8e2cf;padding:10px 40px 10px 12px;margin:0 0 10px;font-size:14.5px;line-height:1.4;border-left:4px solid #e0ad25}
+<style>.appver{margin:18px 0 4px;text-align:center;font-size:12px;color:#7c7767;letter-spacing:.04em}body.pfland .appver{display:none}
+.installhint{position:relative;background:#4e4b42;color:#e8e2cf;padding:10px 40px 10px 12px;margin:0 0 10px;font-size:14.5px;line-height:1.4;border-left:4px solid #e0ad25}
 .installhint button{position:absolute;top:6px;right:6px;width:28px;height:28px;border:1px solid #e8e2cf;background:none;color:#e8e2cf;font-size:18px;line-height:1;cursor:pointer}</style>
 </body>
 </html>
