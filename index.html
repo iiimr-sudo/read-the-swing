@@ -136,6 +136,12 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .rdlean.l3 svg{animation:leanpulse 1.8s ease-in-out infinite}.rdlean.l1 svg{opacity:.6;filter:none}.rdlean.fl svg{stroke:#e8e2cf;filter:none;opacity:.8}
 .rdlean b{font:700 16px 'Saira Semi Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase}
 .rdlean .firm{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}.rdlean .why{font-size:11.5px;line-height:1.3;color:#cfc8b2}
+.jrlog{margin:10px 0 2px;background:var(--ink);color:var(--inv)}.jrlog:disabled{background:none;color:var(--mut);cursor:default}
+.rdlean .rec{margin-top:4px;padding-top:4px;border-top:1px solid rgba(232,226,207,.25);font-size:11px;line-height:1.3;color:var(--gold)}
+.jre{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;padding:10px 0;border-top:1px solid var(--line)}.jrth img{width:92px;height:auto;display:block;border:1px solid var(--line)}
+.jre .seg .btn{padding:8px 6px;font-size:13px}.lnk{background:none;border:0;padding:0 0 0 6px;color:var(--ink);text-decoration:underline;font:inherit;font-size:13px;cursor:pointer}.lnk.del{display:block;padding:6px 0 0;color:var(--mut)}
+.jra{width:20px;height:20px;vertical-align:-5px;fill:none;stroke:var(--ink);stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.jrt{width:100%;border-collapse:collapse;font-size:12.5px}.jrt th{text-align:left;font-weight:600;color:var(--mut);padding:4px 3px;border-bottom:1px solid var(--line)}.jrt td{padding:5px 3px;border-bottom:1px solid var(--line);vertical-align:middle}.jrt td:nth-child(n+3),.jrt th:nth-child(n+3){text-align:right}
 .rdlean .rdx{position:absolute;top:2px;right:4px;background:none;border:0;color:#cfc8b2;font-size:16px;line-height:1;padding:2px;cursor:pointer}
 .rdlean.mini{width:auto;padding:5px 10px;font:700 12px 'Saira Semi Condensed',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;color:var(--gold)}
 @keyframes leanpulse{0%,100%{filter:drop-shadow(0 0 3px rgba(224,173,37,.6))}50%{filter:drop-shadow(0 0 10px rgba(224,173,37,1))}}
@@ -189,6 +195,8 @@ body.pfland .status,body.pfland nav.tabs,body.pfland .rule{display:none}body.pfl
  .fall{animation:fall .42s cubic-bezier(.2,.8,.2,1) both;transform-box:fill-box}@keyframes fall{from{opacity:0;transform:translateY(-16px)}to{opacity:1;transform:none}}
  .flash{animation:fl .35s steps(3)}@keyframes fl{0%{opacity:.2}50%{opacity:.8}100%{opacity:1}}}
 </style>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' data: blob:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
@@ -261,6 +269,13 @@ const BASE={focus:CATS.slice(),loc:'both',kinds:['single'],mark:false,name:false
 const FREEDEF={focus:CATS.slice(),loc:'both',kinds:['single','struct','seq','scen','spot'],mark:true,name:true,classify:true,ctx:true,next:true,hard:false,long:false};
 /* ---------- progress ---------- */
 let S={xp:0,streak:0,best:0,sk:{},hardsk:{},badges:{},cleared:{},free:{...FREEDEF},unlockAll:false,sound:true,music:true};
+/* anything loaded from outside (a progress code someone sends you) is reduced to plain numbers, true/false and short plain
+   text: no markup can ride in on it */
+function cleanData(v,d=0){if(d>6)return undefined;if(typeof v==='number')return isFinite(v)?v:0;if(typeof v==='boolean'||v===null)return v;
+ if(typeof v==='string')return v.length<=160&&!/[<>"`\\]/.test(v)?v:undefined;
+ if(Array.isArray(v))return v.slice(0,2000).map(x=>cleanData(x,d+1)).filter(x=>x!==undefined);
+ if(typeof v==='object'){const o={};for(const k of Object.keys(v).slice(0,4000)){if(k==='__proto__'||k==='constructor'||k==='prototype'||k.length>80||/[<>"`]/.test(k))continue;const x=cleanData(v[k],d+1);if(x!==undefined)o[k]=x}return o}
+ return undefined}
 function save(){S._t=Date.now();try{localStorage.setItem('read-the-swing-2',JSON.stringify(S))}catch(e){}syncPush()}
 function load(d){let o=d&&d.S?d.S:null;if(!o){try{o=JSON.parse(localStorage.getItem('read-the-swing-2')||'null')}catch(e){}}if(o)S={...S,...o,free:{...FREEDEF,...(o.free||{})}}}
 const hist=(k,hard)=>(hard?S.hardsk:S.sk)[k]||[];
@@ -575,7 +590,7 @@ function codex(){
   else overlay(`<span class="tag">Progress code</span><h2>Copy this</h2><textarea id="bkt" readonly style="width:100%;height:140px;font:12px monospace">${c}</textarea><div class="row"><button class="btn" id="no">Done</button></div>`,()=>{$('#bkt').select();$('#no').onclick=closeOv})});
  $('#bkin').addEventListener('click',()=>overlay(`<span class="tag">Progress code</span><h2>Paste the code</h2><p>It replaces the progress on this device.</p><textarea id="bkt" style="width:100%;height:140px;font:12px monospace" placeholder="RTS1.…"></textarea><p class="m" id="bkerr"></p><div class="row"><button class="btn" id="yes">Load it</button><button class="btn" id="no">Cancel</button></div>`,()=>{$('#no').onclick=closeOv;
   $('#yes').onclick=()=>{const t=$('#bkt').value.trim().replace(/^RTS1\./,'');let o=null;try{o=JSON.parse(decodeURIComponent(escape(atob(t))))}catch(e){}
-   if(!o||typeof o.xp!=='number'){$('#bkerr').textContent='That isn\'t a progress code. Copy the whole thing, starting with RTS1.';return}
+   o=cleanData(o);if(!o||typeof o.xp!=='number'){$('#bkerr').textContent='That isn\'t a progress code. Copy the whole thing, starting with RTS1.';return}
    S={...S,...o,free:{...FREEDEF,...(o.free||{})},resetAt:Date.now()};save();hud();closeOv();codex();toast('Progress loaded',`Level ${level(S.xp)} · ${S.xp} XP`,'',()=>SFX.place())}}));
  $('#reset').addEventListener('click',()=>overlay(`<span class="tag">Confirm</span><h2>Reset everything?</h2><p>XP, levels, proficiency, cleared chapters and the pattern book go back to zero.</p><div class="row"><button class="btn" id="yes">Reset</button><button class="btn" id="no">Keep my progress</button></div>`,()=>{$('#yes').onclick=()=>{S={...S,xp:0,streak:0,best:0,sk:{},hardsk:{},badges:{},cleared:{},dex:{},resetAt:Date.now()};save();hud();closeOv();codex()};$('#no').onclick=closeOv}))}
 function freeScreen(){const F=S.free;
@@ -2135,7 +2150,7 @@ function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null
  const lvl=c=>{if(!c||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;for(let m=pv.length-1;m>=0;m--){const a=pv[m];if(a.t!==c.t||a.i>=c.a)continue;const pP=rdCmp(P,c.t,a.i,c.b);if(pP.k===(c.t==='hi'?'HH':'LL'))continue;
    const ca=cv(c.t,a.i),pV=rdCmp(V,c.t,ca,c.cb);return {t:c.t,a:a.i,b:c.b,ca,cb:c.cb,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(c.t,pP.k,pV.k),lvl:1}}return null};
  return {P,V,n,k,pv,comps,H,L,H2:lvl(H),L2:lvl(L),latest:H&&L?(H.b>L.b?H:L):H||L}}
-async function rdRun(){RD.err=null;RD.out=null;
+async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
  try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;
    if(RD.crop){const c=RD.crop,X0=Math.round(c.x0*D.w),X1=Math.round(c.x1*D.w),Y0=Math.round(c.y0*D.h),Y1=Math.round(c.y1*D.h);for(let y=0;y<D.h;y++)for(let x=0;x<D.w;x++)if(x<X0||x>X1||y<Y0||y>Y1)D.cls[y*D.w+x]=0}
    if(RD.split==null)RD.split=RD.crop?rdSplit(D,Math.round(RD.crop.y0*D.h),Math.round(RD.crop.y1*D.h)):rdSplit(D);
@@ -2170,26 +2185,66 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
 /* the lean, as a small card in the picture's top-right corner: which way the read points and how firmly.
    Firmness comes from the rules of the read, not from statistics: both sides agreeing is firm, one divergence deciding is
    moderate, the latest swing breaking a tie is weak */
-function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" data-rdlean="1" aria-label="Show the lean">Lean</button>`;
- let lean=0,lvl=0,why='';
+const rdEsc=s=>String(s==null?'':s).replace(/[&<>"'`]/g,c=>'&#'+c.charCodeAt(0)+';');
+function rdLeanInfo(o,st,ov){let lean=0,lvl=0,why='';
  if(ov){lean=ov.lean;if(!lean){why='Highs and lows cancel out';lvl=0}
   else if(!ov.conflict){lvl=3;why=st&&st.read.cat!=='none'?st.read.name:'Highs and lows agree'}
   else if(ov.by==='form'){lvl=2;why=st.read.name}
   else if(ov.by==='div'){lvl=2;why=(ov.div.t==='hi'?'The highs':'The lows')+' show '+CAT[ov.div.cat].n.toLowerCase()}
   else{lvl=1;why='Highs and lows disagree; the latest swing leads'}}
- else{const c=o.H||o.L;if(!c)return '';lean=c.lean;lvl=lean?1:0;why=(c.t==='hi'?'Only the highs':'Only the lows')+' could be read'}
- const lv2=[o.H2,o.L2].filter(Boolean),big=lv2.length&&lean?(lv2.some(c=>c.lean&&c.lean!==lean)?' The bigger picture disagrees.':lv2.some(c=>c.lean===lean)?' The bigger picture agrees.':''):'';
- const ang=lean?(lean>0?-1:1)*[0,25,45,90][lvl]:0,word=lean?(lean>0?'Up':'Down'):'Sideways',firm=['','Weak','Moderate','Firm'][lvl];
- const arrow=lean?`<g transform="rotate(${ang})"><line x1="-15" y1="0" x2="13" y2="0"/><path d="M5 -9 L16 0 L5 9"/></g>`:`<line x1="-14" y1="0" x2="14" y2="0"/><path d="M-6 -7 L-15 0 L-6 7 M6 -7 L15 0 L6 7"/>`;
- /* it sits on the divider between price and CVD, where there are no candles */
+ else{const c=o.H||o.L;if(!c)return null;lean=c.lean;lvl=lean?1:0;why=(c.t==='hi'?'Only the highs':'Only the lows')+' could be read'}
+ const lv2=[o.H2,o.L2].filter(Boolean),big=lv2.length&&lean?(lv2.some(c=>c.lean&&c.lean!==lean)?-1:lv2.some(c=>c.lean===lean)?1:0):0;
+ return {lean,lvl,why,big,key:why+'|'+lean}}
+const JRDIR=l=>l>0?'up':l<0?'down':'sideways',FIRMW=['','Weak','Moderate','Firm'];
+function rdArrow(lean,lvl){const ang=lean?(lean>0?-1:1)*[0,25,45,90][lvl]:0;
+ return lean?`<g transform="rotate(${ang})"><line x1="-15" y1="0" x2="13" y2="0"/><path d="M5 -9 L16 0 L5 9"/></g>`:`<line x1="-14" y1="0" x2="14" y2="0"/><path d="M-6 -7 L-15 0 L-6 7 M6 -7 L15 0 L6 7"/>`}
+/* the lean, as a small card on the divider between price and CVD: which way the read points and how firmly.
+   Firmness comes from the rules of the read: both sides agreeing is firm, one divergence deciding is moderate, the latest
+   swing breaking a tie is weak. Once the journal has enough marked scans, the card also shows your own record */
+function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" data-rdlean="1" aria-label="Show the lean">Lean</button>`;
+ const I=rdLeanInfo(o,st,ov);if(!I)return '';const {lean,lvl,why,big}=I,word=lean?(lean>0?'Up':'Down'):'Sideways',firm=FIRMW[lvl];
+ const hz=S.jrH||15,ks=jrStats(e=>e.key===I.key);let rec='';
+ if(ks.n>=3)rec=`Your log: ${lean>0?ks.up:lean<0?ks.dn:ks.fl} of ${ks.n} went ${JRDIR(lean)} (${hz} min)`;
+ else{const fs=jrStats(e=>e.lvl===lvl&&!!e.lean===!!lean);if(fs.n>=5)rec=`Your ${(firm||'sideways').toLowerCase()} reads: ${fs.ok} of ${fs.n} right (${hz} min)`}
  const pos=RD.mode==='one'&&RD.D1&&RD.split?`style="top:calc(8px + ${(RD.split/RD.D1.h*100).toFixed(1)}%);transform:translateY(-50%)"`:'';
- return `<div class="rdlean l${lvl} ${lean>0?'up':lean<0?'dn':'fl'}" ${pos}><button class="rdx" data-rdlean="0" aria-label="Hide">×</button><svg viewBox="-22 -22 44 44" aria-hidden="true">${arrow}</svg>
-  <b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}<span class="why">${why}.${big}</span></div>`}
+ return `<div class="rdlean l${lvl} ${lean>0?'up':lean<0?'dn':'fl'}" ${pos}><button class="rdx" data-rdlean="0" aria-label="Hide">×</button><svg viewBox="-22 -22 44 44" aria-hidden="true">${rdArrow(lean,lvl)}</svg>
+  <b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}<span class="why">${rdEsc(why)}.${big>0?' The bigger picture agrees.':big<0?' The bigger picture disagrees.':''}</span>${rec?`<span class="rec">${rec}</span>`:''}</div>`}
+
+/* ---------- scan journal: each logged read, and what price did next ---------- */
+function jrList(){if(!Array.isArray(S.jr))S.jr=[];if(S.jr.some(e=>!e||typeof e.id!=='string'||!/^[a-z0-9]+$/.test(e.id)))S.jr=S.jr.filter(e=>e&&typeof e.id==='string'&&/^[a-z0-9]+$/.test(e.id));return S.jr}
+const jrRight=e=>e.out!=null&&(e.lean?e.out===e.lean:e.out===0);
+function jrStats(f){const L=jrList().filter(e=>e.out!=null&&e.hz===(S.jrH||15)&&f(e));return {n:L.length,ok:L.filter(jrRight).length,up:L.filter(e=>e.out>0).length,dn:L.filter(e=>e.out<0).length,fl:L.filter(e=>e.out===0).length}}
+function jrAdd(o,st,ov){const I=rdLeanInfo(o,st,ov);if(!I)return;const id=Date.now().toString(36);
+ try{const src=document.querySelector('#rdpics canvas');if(src){const W=320,c=document.createElement('canvas');c.width=W;c.height=Math.round(src.height*W/src.width);c.getContext('2d').drawImage(src,0,0,c.width,c.height);localStorage.setItem('rts-th-'+id,c.toDataURL('image/jpeg',.6))}}catch(e){}
+ const L=jrList();L.push({id,t:Date.now(),lean:I.lean,lvl:I.lvl,why:I.why,key:I.key,big:I.big,h:o.H?[o.H.pk,o.H.ck]:null,l:o.L?[o.L.pk,o.L.ck]:null,out:null,hz:null});
+ while(L.length>300){const x=L.shift();try{localStorage.removeItem('rts-th-'+x.id)}catch(e){}}
+ RD.logged=id;save();toast('Logged','Come back and mark what price did next','',()=>SFX.place())}
+function jrOpen(){return jrList().filter(e=>e.out==null).length}
+function jrScreen(){const L=jrList(),hz=S.jrH||15,all=jrStats(()=>true),pc=(a,b)=>b?Math.round(a/b*100)+'%':'–';
+ const groups={};for(const e of L)if(e.out!=null&&e.hz===hz){const g=groups[e.key]||(groups[e.key]={why:e.why,lean:e.lean,lvl:e.lvl,n:0,ok:0,up:0,dn:0,fl:0});g.n++;if(jrRight(e))g.ok++;if(e.out>0)g.up++;else if(e.out<0)g.dn++;else g.fl++}
+ const gl=Object.values(groups).sort((a,b)=>b.n-a.n);
+ const sum=all.n?`<div class="panel"><p class="q" style="margin:0 0 4px">The arrow was right <b>${all.ok} of ${all.n}</b> times (${pc(all.ok,all.n)}), judged after ${hz} minutes.</p>
+   <p class="m" style="margin:0 0 8px">${[3,2,1].map(l=>{const s=jrStats(e=>e.lvl===l&&e.lean);return s.n?`${FIRMW[l]}: ${s.ok} of ${s.n}`:''}).filter(Boolean).join(' · ')}${all.n<20?' · Small sample: treat these as early numbers.':''}</p>
+   <table class="jrt"><tr><th>Read</th><th>Arrow</th><th>n</th><th>Up</th><th>Down</th><th>Side</th><th>Right</th></tr>${gl.map(g=>`<tr><td>${rdEsc(g.why)}</td><td><svg class="jra" viewBox="-22 -22 44 44">${rdArrow(g.lean,g.lvl)}</svg></td><td>${g.n}</td><td>${g.up}</td><td>${g.dn}</td><td>${g.fl}</td><td><b>${pc(g.ok,g.n)}</b></td></tr>`).join('')}</table></div>`
+  :`<div class="panel"><p>No marked reads yet${L.length?` at ${hz} minutes`:''}. Scan a chart, tap <b>Log this read</b>, and once the next ${hz} minutes have played out, come back here and mark what price did.</p></div>`;
+ const fmt=t=>new Date(t).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+ const items=[...L].reverse().map(e=>{let th=null;try{th=localStorage.getItem('rts-th-'+e.id)}catch(x){}const ok=jrRight(e),id=rdEsc(e.id);
+  return `<div class="jre"><div class="jrth">${th&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(th)?`<img src="${th}" alt="">`:''}</div><div class="jrb">
+   <p class="m" style="margin:0">${fmt(+e.t||0)}</p><p style="margin:2px 0 6px"><svg class="jra" viewBox="-22 -22 44 44">${rdArrow(+e.lean||0,+e.lvl||0)}</svg> <b>${e.lean>0?'Up':e.lean<0?'Down':'Sideways'}</b>${FIRMW[+e.lvl||0]?' · '+FIRMW[+e.lvl]:''} · ${rdEsc(e.why)}</p>
+   ${e.out==null?`<p class="m" style="margin:0 0 4px">What did price do in the next ${hz} minutes?</p><div class="row seg"><button class="btn" data-jro="${id}|1">Up</button><button class="btn" data-jro="${id}|-1">Down</button><button class="btn" data-jro="${id}|0">Sideways</button></div>`
+    :`<p style="margin:0"><span class="verdict ${ok?'ok':'no'}" style="font-size:15px">${ok?'Right':'Wrong'}</span> · went ${JRDIR(e.out)} (${+e.hz} min) <button class="lnk" data-jrc="${id}">Change</button></p>`}
+   <button class="lnk del" data-jrd="${id}">Delete</button></div></div>`}).join('');
+ return `<div class="lab">I judge what happened after</div><div class="row seg">${[5,15,30].map(m=>`<button class="btn" data-jrh="${m}" aria-pressed="${hz===m}">${m} min</button>`).join('')}</div>
+  <p class="m" style="font-size:13px">Pick one and stick to it: the record only counts marks made at this length. Up or down means price clearly moved that way; sideways means it stayed in the range.</p>
+  ${sum}${L.length?`<div class="lab">Logged reads · ${L.length}</div>${items}`:''}`}
+
 function rdLine(c,lab){if(!c)return '';const e=G[c.t][c.pk+'|'+c.ck],id=`${c.t}:${c.pk}|${c.ck}`,de=DEX[DEXI[id]],pc=d=>Math.abs(Math.round(d*100))+'%';
  return `<div class="lab">${lab}</div><p>Price <b>${WORD[c.pk].toLowerCase()}</b> (${pc(c.dP)} of the pullback), CVD <b>${WORD[c.ck].toLowerCase()}</b> (${pc(c.dV)}). <b>${e.n}</b>: ${CAT[c.cat].n.toLowerCase()}, ${c.lean>0?'leans up':c.lean<0?'leans down':'no lean'}.${[c.dP,c.dV].some(d=>Math.abs(d)>=.07&&Math.abs(d)<=.13)?' One of these sits right at the 10% line, so it could read either way.':''}</p><p class="m">${e.read}</p>
  <div class="row"><button class="btn" data-dx="${DEXI[id]}">${no3(de.no)} in the book</button><button class="btn" data-rdrill="${DEXI[id]}">Practise this</button></div>`}
-function scanScreen(){const o=RD.out;
- const head=`<h2 style="font-size:20px;margin:0 0 4px">Read a chart</h2><p class="sub" style="margin:0 0 10px">A photo or a screenshot: price on top and CVD below in one picture, or two pictures. It finds the candles, the swings and the read. Nothing leaves your phone.</p>
+function scanScreen(){const o=RD.out,nOpen=jrOpen();
+ const vsw=`<div class="row seg" style="margin-bottom:10px"><button class="btn" data-rdview="read" aria-pressed="${RD.view!=='jr'}">Read a chart</button><button class="btn" data-rdview="jr" aria-pressed="${RD.view==='jr'}">Journal${nOpen?` · ${nOpen} to mark`:''}</button></div>`;
+ if(RD.view==='jr'){$('#screen').innerHTML=vsw+`<h2 style="font-size:20px;margin:0 0 4px">Scan journal</h2><p class="sub" style="margin:0 0 10px">Every read you log and what price did next. Your own record, built from your own charts.</p>`+jrScreen();jrBind();return}
+ const head=vsw+`<h2 style="font-size:20px;margin:0 0 4px">Read a chart</h2><p class="sub" style="margin:0 0 10px">A photo or a screenshot: price on top and CVD below in one picture, or two pictures. It finds the candles, the swings and the read. Nothing leaves your phone.</p>
  <div class="grid two"><label class="btn file">One picture<input type="file" accept="image/*" id="rd1"></label><label class="btn file">Two pictures<input type="file" accept="image/*" id="rd2" multiple></label></div>
  <p class="m" style="font-size:13px;margin:6px 0 0">Two pictures: choose price first, then CVD. Screenshots read best; for a photo of a screen, shoot straight on and fill the frame. Green and red candles, any theme.</p>
  <div class="lab">Or paste it</div><p class="m" style="font-size:13px;margin:0 0 6px">Works where the file buttons can't open pictures (the Files preview). In Photos: Share › Copy. Then press and hold a box and tap Paste.</p>
@@ -2200,6 +2255,7 @@ function scanScreen(){const o=RD.out;
  else if(RD.err)body=`<div class="panel"><p class="verdict no" style="font-size:20px">Couldn't read it</p><p>${RD.err}</p>${RD.mode==='one'&&RD.D1?`<div class="panel rdpics" id="rdpics"></div><button class="btn wide" data-rdcrop="1" aria-pressed="${!!RD.cropping}">${RD.cropping?'Drag a box around the candles…':'Mark the chart area'}</button>`:''}</div>`;
  else if(o){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?structLean(st&&st.read,[o.H,o.L].map(c=>({...c,k:c.b}))):null;
   body=`<div class="panel rdpics" id="rdpics">${rdLeanBox(o,st,ov)}</div>
+  ${RD.isDemo?'':`<button class="btn wide jrlog" data-jradd="1" ${RD.logged?'disabled':''}>${RD.logged?'Logged · mark it in the Journal later':'Log this read'}</button>`}
   <div class="lab">Swing size</div>${`<div class="row seg">${[['0','Small'],['1','Medium'],['2','Large']].map(([v,l])=>`<button class="btn" data-rdsz="${v}" aria-pressed="${RD.size==+v}">${l}</button>`).join('')}</div>`}
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rdall="0" aria-pressed="${!RD.all}">Latest highs and lows</button><button class="btn" data-rdall="1" aria-pressed="${RD.all}">Every swing</button></div>
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rddots="1" aria-pressed="${!!RD.dots}">Show the candles it found</button></div>
@@ -2216,34 +2272,45 @@ function scanScreen(){const o=RD.out;
  if(RD.err&&RD.mode==='one'&&RD.D1&&$('#rdpics')){const c=document.createElement('canvas');c.width=RD.D1.w;c.height=RD.D1.h;c.getContext('2d').drawImage(RD.D1.img,0,0,RD.D1.w,RD.D1.h);$('#rdpics').appendChild(c);rdCropBind(c)}
  if(o&&!RD.busy&&!RD.err){const box=$('#rdpics');if(RD.mode==='one'){const cv=rdCanvas(RD.D1,[{w:'P'},{w:'V'}]);box.appendChild(cv);rdCropBind(cv)}else{box.innerHTML='<div class="ph"><h3>Price</h3></div>';box.appendChild(rdCanvas(RD.DP,[{w:'P'}]));box.insertAdjacentHTML('beforeend','<div class="ph" style="margin-top:8px"><h3>CVD</h3></div>');box.appendChild(rdCanvas(RD.DV,[{w:'V'}]))}}
  const go=async()=>{RD.busy=true;scanScreen();await new Promise(r=>setTimeout(r,30));await rdRun();RD.busy=false;scanScreen()};
- $('#rd1').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{RD.src=await rdLoad(f);RD.mode='one';RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}catch(er){RD.err=er.message;scanScreen()}};
+ $('#rd1').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{RD.src=await rdLoad(f);RD.mode='one';RD.isDemo=false;RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}catch(er){RD.err=er.message;scanScreen()}};
  /* pasted pictures live in memory, so they can be read even where picked files can't */
  const takeImg=async im=>{if(!im)return null;try{const r=await fetch(im.src);const b=await r.blob();if(b.size)return b}catch(e){}
   try{if(!im.complete)await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;setTimeout(no,4000)});if(im.naturalWidth){const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);c.getContext('2d').getImageData(0,0,1,1);return c}}catch(e){}return null};
  const onPaste=async(e,two)=>{const box=e.currentTarget;let f=null;const cd=e.clipboardData;
   if(cd){if(cd.files&&cd.files.length)f=cd.files[0];else for(const it of cd.items||[])if(it.kind==='file'&&/^image\//.test(it.type)){f=it.getAsFile();break}}
-  if(f)e.preventDefault();else{await new Promise(r=>setTimeout(r,120));f=await takeImg(box.querySelector('img'))}
+  e.preventDefault();/* nothing pasted is ever put into the page: only a picture is taken out of it */
+  if(!f&&cd){const h=cd.getData('text/html');if(h){const im=new DOMParser().parseFromString(h,'text/html').querySelector('img[src]'),src=im&&im.getAttribute('src');
+   if(src&&/^(data:image\/|blob:|https:)/.test(src)){const img=new Image();img.crossOrigin='anonymous';img.src=src;f=await takeImg(img)}}}
   box.innerHTML='';
   if(!f){RD.err='Nothing readable came through the paste. Copy the picture itself (in Photos: Share › Copy), then paste.';scanScreen();return}
   try{const src=f instanceof HTMLCanvasElement?f:await rdLoad(f);
-   if(!two){RD.src=src;RD.mode='one';RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}
+   if(!two){RD.src=src;RD.mode='one';RD.isDemo=false;RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}
    else if(!RD.pendP){RD.pendP=src;RD.err=null;RD.out=null;scanScreen();toast('Price picture in','Now paste the CVD picture','',()=>SFX.place())}
-   else{RD.P=RD.pendP;RD.V=src;RD.pendP=null;RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
+   else{RD.P=RD.pendP;RD.V=src;RD.pendP=null;RD.mode='two';RD.isDemo=false;if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
  for(const [id,two] of [['#rp1',false],['#rp2',true]]){const b=$(id);if(b){b.addEventListener('paste',e=>onPaste(e,two));b.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey))e.preventDefault()})}}
  $('#rd2').onchange=async e=>{const fs=[...e.target.files];if(!fs.length)return;
-  try{if(fs.length>=2){RD.P=await rdLoad(fs[0]);RD.V=await rdLoad(fs[1]);RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}else if(!RD.pendP){RD.pendP=await rdLoad(fs[0]);RD.err=null;RD.out=null;$('#screen').insertAdjacentHTML('afterbegin','');toast('Price picture loaded','Now pick the CVD picture','',()=>SFX.place());}
-   else{RD.P=RD.pendP;RD.V=await rdLoad(fs[0]);RD.pendP=null;RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
+  try{if(fs.length>=2){RD.P=await rdLoad(fs[0]);RD.V=await rdLoad(fs[1]);RD.mode='two';RD.isDemo=false;if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}else if(!RD.pendP){RD.pendP=await rdLoad(fs[0]);RD.err=null;RD.out=null;$('#screen').insertAdjacentHTML('afterbegin','');toast('Price picture loaded','Now pick the CVD picture','',()=>SFX.place());}
+   else{RD.P=RD.pendP;RD.V=await rdLoad(fs[0]);RD.pendP=null;RD.mode='two';RD.isDemo=false;if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
  const sp=$('#rdsplit');if(sp)sp.onchange=()=>{RD.split=+sp.value;go()};
  $('#screen').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;SFX.click();
-  if(b.id==='rdtry'){RD.size=0;RD.demoSz=true;RD.crop=null;RD.cropping=false;rdDemo().then(go)}
+  if(b.id==='rdtry'){RD.isDemo=true;RD.size=0;RD.demoSz=true;RD.crop=null;RD.cropping=false;rdDemo().then(()=>{RD.isDemo=true;go()})}
   else if(b.dataset.rdsz!==undefined){RD.size=+b.dataset.rdsz;RD.out=rdAnalyse();scanScreen()}
   else if(b.dataset.rdall!==undefined){RD.all=b.dataset.rdall==='1';scanScreen()}
   else if(b.dataset.rddots){RD.dots=!RD.dots;scanScreen()}
   else if(b.dataset.rdlean){RD.hideLean=b.dataset.rdlean==='0';scanScreen()}
+  else if(b.dataset.rdview){RD.view=b.dataset.rdview;scanScreen();scrollTo(0,0)}
+  else if(b.dataset.jradd&&!RD.logged){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?structLean(st&&st.read,[o.H,o.L].map(c=>({...c,k:c.b}))):null;jrAdd(o,st,ov);scanScreen()}
   else if(b.dataset.rdcrop==='clear'){RD.crop=null;RD.cropping=false;RD.split=null;go()}
   else if(b.dataset.rdcrop){RD.cropping=!RD.cropping;scanScreen();if(RD.cropping){const pc=$('#rdpics');pc&&pc.scrollIntoView({block:'center',behavior:'smooth'})}}
   else if(b.dataset.dx!==undefined){DV.i=+b.dataset.dx;DV.seed=0;setTab('dex')}
   else if(b.dataset.rdrill!==undefined)drill(DEX[+b.dataset.rdrill])}}
+function jrBind(){$('#screen').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;SFX.click();const L=jrList(),find=id=>L.find(e=>e.id===id);
+  if(b.dataset.rdview){RD.view=b.dataset.rdview;scanScreen();scrollTo(0,0);return}
+  if(b.dataset.jrh){S.jrH=+b.dataset.jrh;save()}
+  else if(b.dataset.jro){const [id,v]=b.dataset.jro.split('|'),e=find(id);if(e){e.out=+v;e.hz=S.jrH||15;save();jrRight(e)?SFX.hit():SFX.miss()}}
+  else if(b.dataset.jrc){const e=find(b.dataset.jrc);if(e){e.out=null;e.hz=null;save()}}
+  else if(b.dataset.jrd){const i=L.findIndex(e=>e.id===b.dataset.jrd);if(i>=0){try{localStorage.removeItem('rts-th-'+L[i].id)}catch(x){}L.splice(i,1);save()}}
+  const y=scrollY;scanScreen();scrollTo(0,y)}}
 /* marking the chart area: drag a box on the picture; reading then ignores everything outside it */
 function rdCropBind(cv){if(!RD.cropping)return;cv.style.touchAction='none';cv.style.cursor='crosshair';let st=null;const ov=document.createElement('div');ov.className='rdbox';cv.parentElement.style.position='relative';cv.parentElement.appendChild(ov);
  const pt=e=>{const r=cv.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)),r}};
@@ -2261,7 +2328,7 @@ function rdDemo(){const types=typesEnding(9,pick(['h','l'])),kP=types.map((ty,k)
   C.forEach((k,i)=>{const cx=10+(i+.5)*st,up=k.c>=k.o;x.strokeStyle=up?'#089981':'#f23645';x.fillStyle=x.strokeStyle;x.lineWidth=1.5;x.beginPath();x.moveTo(cx,Y(k.h));x.lineTo(cx,Y(k.l));x.stroke();const t=Math.min(Y(k.o),Y(k.c));x.fillRect(cx-st*.3,t,st*.6,Math.max(1.5,Math.abs(Y(k.o)-Y(k.c))))});
   x.fillStyle='#888';x.font='12px sans-serif';for(let i=0;i<5;i++)x.fillText((lo+(hi-lo)*i/4).toFixed(0),W-60,Y(lo+(hi-lo)*i/4))};
  pane(ch.P,0,450);x.fillStyle='#3a3a3a';x.fillRect(0,452,W,3);pane(ch.V,456,H);
- RD.src=c;RD.mode='one';RD.split=null;return Promise.resolve()}
+ RD.src=c;RD.mode='one';RD.isDemo=false;RD.split=null;return Promise.resolve()}
 
 /* ---------- Profile: market profile beside price and CVD ----------
    One 30-minute TPO period = six 5-minute candles, lettered A, B, C… Each round plays the case where price and CVD
@@ -2709,7 +2776,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795743595';
+window.APPV='1795743978';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
