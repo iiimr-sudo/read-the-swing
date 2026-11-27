@@ -129,6 +129,7 @@ table{width:100%;border-collapse:collapse;font-size:14px}th{font:600 12.5px "Sai
 .btn.lklink{display:inline-flex;min-height:28px;padding:0 8px;font-size:12px;margin-left:4px;vertical-align:middle}.btn.lklink::before{display:none}
 .lkres{border-top:1px solid var(--line);margin-top:6px;padding-top:8px}.lkres p{margin:6px 0;font-size:15px}.lkfig{display:grid;grid-template-columns:1fr;gap:6px;margin:8px 0}.lkfig svg{display:block;width:100%;height:auto}
 .pastebox{min-height:64px;border:1px dashed var(--ink);background:var(--card);padding:8px;font-size:14px;color:var(--mut);outline:none;overflow:hidden;-webkit-user-select:text;user-select:text}.pastebox:empty::before{content:attr(data-ph);color:var(--mut);letter-spacing:.04em}.pastebox:focus{border-style:solid;box-shadow:0 0 0 2px var(--gold)}.pastebox img{max-width:100%;max-height:60px}
+.rdbox{position:absolute;display:none;border:2px dashed var(--gold);background:rgba(224,173,37,.15);pointer-events:none}
 .rdpics canvas{display:block;width:100%;height:auto;margin-top:4px}.rdpics{padding:8px}
 
 .pf{display:grid;gap:6px}.pf>div{position:relative;min-width:0}.pft{position:absolute;left:6px;top:3px;font:700 10px 'Saira Semi Condensed',sans-serif;letter-spacing:.16em;color:var(--ink);opacity:.7;z-index:1}
@@ -1954,8 +1955,12 @@ function rdData(img,maxW){const iw=img.naturalWidth||img.width,ih=img.naturalHei
 /* class map: 1 up colour, 2 down colour, 3 wick-like grey, 0 other */
 function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let i=0;i<w*h;i+=97){const k=i*4;vs.push(Math.max(d[k],d[k+1],d[k+2])/255)}vs.sort((a,b)=>a-b);const bg=vs[vs.length>>1],dark=bg<.5;
  for(let i=0;i<w*h;i++){const k=i*4,[hh,s,v]=rdHsv(d[k],d[k+1],d[k+2]);
-  if(s>.26&&v>.28&&hh>=70&&hh<=186)cls[i]=1;else if(s>.28&&v>.3&&(hh<=24||hh>=330))cls[i]=2;else if(s<.22&&Math.abs(v-bg)>.22&&(dark?v>bg:v<bg))cls[i]=3}
+  if(s>.26&&v>.28&&hh>=70&&hh<=186)cls[i]=1;else if(s>.3&&v>.3&&(hh<=13||hh>=332))cls[i]=2;else if(s<.22&&Math.abs(v-bg)>.22&&(dark?v>bg:v<bg))cls[i]=3}
  D.cls=cls;D.dark=dark;return D}
+/* a wick over a coloured background (a session box, a highlight): the pixel stands out from the background on both sides, and those two sides match each other */
+function rdWk(D,x,y,hw){const {w,d}=D;if(x-hw<0||x+hw>=w)return false;const p=(y*w+x)*4,l=(y*w+x-hw)*4,r=(y*w+x+hw)*4;
+ const dist=(a,b)=>Math.abs(d[a]-d[b])+Math.abs(d[a+1]-d[b+1])+Math.abs(d[a+2]-d[b+2]);if(dist(l,r)>40)return false;
+ const m=[(d[l]+d[r])/2,(d[l+1]+d[r+1])/2,(d[l+2]+d[r+2])/2];return Math.abs(d[p]-m[0])+Math.abs(d[p+1]-m[1])+Math.abs(d[p+2]-m[2])>45}
 /* rows that are mostly one colour across the chart are lines (price line, levels), not candles */
 function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
  for(let y=y0;y<y1;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}if(n>w*.25)mask[y-y0]=1}
@@ -1973,7 +1978,7 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
   G.length=0;G.push(...out)}
  /* wicks drawn in grey (price candles on a dark theme): follow them from the body */
  for(const g of G){const xc=Math.round((g.x0+g.x1)/2);for(const x of [xc-1,xc,xc+1]){if(x<0||x>=w)continue;
-  const ok=y=>{const c=cls[y*w+x];return c===3||c===g.c};
+  const hw=Math.max(3,Math.round((g.x1-g.x0)/2+3)),ok=y=>{const c=cls[y*w+x];return c===3||c===g.c||rdWk(D,x,y,hw)};
   let y=g.t-1,gap=0,top=g.t;while(y>=y0){if(ok(y)){top=y;gap=0}else if(++gap>1)break;y--}
   y=g.b+1;gap=0;let bot=g.b;while(y<y1){if(ok(y)){bot=y;gap=0}else if(++gap>1)break;y++}
   if(top<g.t&&g.t-top<(y1-y0)*.5)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.5)g.wb=Math.max(g.wb??g.b,bot)}
@@ -2028,7 +2033,7 @@ function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3
  const S=[];for(let xc=bp;xc<w;xc+=per){const a=Math.max(0,Math.round(xc-per*.3)),b=Math.min(w-1,Math.round(xc+per*.3));let t=1e9,bt=-1,nu=0,nd=0;
   for(let x=a;x<=b;x++){const s=seg[x];if(!s)continue;t=Math.min(t,s.t);bt=Math.max(bt,s.b);if(s.c===1)nu+=s.b-s.t+1;else nd+=s.b-s.t+1}
   if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(let x=a;x<=b;x++){const s=seg[x];if(s){cx+=x*(s.b-s.t+1);cw+=s.b-s.t+1}}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
-  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const ok=y=>{const c=cls[y*w+x];return c===3||c===g.c};
+  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(3,Math.round(per*.42)),ok=y=>{const c=cls[y*w+x];return c===3||c===g.c||rdWk(D,x,y,hw)};
    let y=g.t-1,gap=0,top=g.t;while(y>=y0){if(ok(y)){top=y;gap=0}else if(++gap>1)break;y--}y=g.b+1;gap=0;let bot=g.b;while(y<y1){if(ok(y)){bot=y;gap=0}else if(++gap>1)break;y++}
    if(top<g.t&&g.t-top<(y1-y0)*.4)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.4)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b);S.push(g)}
@@ -2042,10 +2047,10 @@ function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3
  if(!fit&&main.length>=12){let n=main.length,sx=0,sy=0,sxx=0,sxy=0;for(const g of main){sx+=g.slot;sy+=g.cx;sxx+=g.slot*g.slot;sxy+=g.slot*g.cx}const d=n*sxx-sx*sx;
   if(d){const b2=(n*sxy-sx*sy)/d,a2=(sy-b2*sx)/n;if(Math.abs(b2-per)/per<.15){let ph=a2%b2;if(ph<0)ph+=b2;const R2=rdGrid(D,y0,y1,b2,prep,{ph});if(R2.length>=main.length*.9)return R2}}}
  main.per=per;return main}
-function rdSplit(D){const {w,h,cls}=D,row=new Float32Array(h);for(let y=0;y<h;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}row[y]=n}
+function rdSplit(D,ya,yb){ya=ya||0;const {w,h,cls}=D;yb=yb||h;const row=new Float32Array(h);for(let y=0;y<h;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}row[y]=n}
  const sm=new Float32Array(h);for(let y=0;y<h;y++){let a=0,n=0;for(let k=-4;k<=4;k++){const q=y+k;if(q>=0&&q<h){a+=row[q];n++}}sm[y]=a/n}
  let mx=0;for(let y=0;y<h;y++)mx=Math.max(mx,sm[y]);const thr=Math.max(1.5,mx*.03);
- let best=[h/2,0],s=-1;for(let y=Math.floor(h*.2);y<=Math.ceil(h*.85);y++){if(y<h*.85&&sm[y]<=thr){if(s<0)s=y}else if(s>=0){if(y-s>best[1])best=[(s+y)/2,y-s];s=-1}}return Math.round(best[0])}
+ const lo=ya+(yb-ya)*.2,hi=ya+(yb-ya)*.85;let best=[(ya+yb)/2,0],s=-1;for(let y=Math.floor(lo);y<=Math.ceil(hi);y++){if(y<hi&&sm[y]<=thr){if(s<0)s=y}else if(s>=0){if(y-s>best[1])best=[(s+y)/2,y-s];s=-1}}return Math.round(best[0])}
 function rdPair(P,V,wP,wV,same){const out=[];if(!P.length||!V.length)return out;
  if(same||Math.abs(wP-wV)/Math.max(wP,wV)<.04){const sc=same?1:wP/wV,per=P.per||4;let j=0;
   for(const p of P){while(j<V.length-1&&V[j+1].x*sc<=p.x)j++;let best=null;for(const q of [V[j],V[j+1]])if(q&&Math.abs(q.x*sc-p.x)<=per*.6&&(!best||Math.abs(q.x*sc-p.x)<Math.abs(best.x*sc-p.x)))best=q;if(best)out.push([p,best])}}
@@ -2056,18 +2061,32 @@ function rdPivots(c,k,per){const n=c.length,pv=[];per=per||1;
   for(let j=0;j<n;j++){if(j===i||Math.abs(c[j].x-c[i].x)>k*per+.5)continue;if(c[j].hv>c[i].hv||(j<i&&c[j].hv===c[i].hv))H=false;if(c[j].lv<c[i].lv||(j<i&&c[j].lv===c[i].lv))L=false}
   if(H)pv.push({t:'hi',i,v:c[i].hv});if(L)pv.push({t:'lo',i,v:c[i].lv})}
  const out=[];for(const p of pv){const q=out[out.length-1];if(q&&q.t===p.t){if(p.t==='hi'?p.v>q.v:p.v<q.v)out[out.length-1]=p}else out.push(p)}return out}
+/* swings must be real moves: drop the smallest leg (both its ends) while it is under a share of the chart's height */
+function rdZig(pv,c,f){const rg=Math.max(...c.map(x=>x.hv))-Math.min(...c.map(x=>x.lv)),thr=f*rg;pv=pv.slice();
+ const ext=(X,Y)=>X.t==='hi'?X.v>Y.v:X.v<Y.v;
+ for(let it=0;it<200&&pv.length>2;it++){let m=-1,s=Infinity;for(let i=0;i+1<pv.length;i++){const d=Math.abs(pv[i].v-pv[i+1].v);if(d<s){s=d;m=i}}if(s>=thr)break;
+  /* drop the leg's two ends; each one hands its place to the neighbour of its kind if it was the stronger extreme */
+  const A=pv[m],B=pv[m+1];pv.splice(m,2);
+  for(const X of [A,B]){const nb=[pv[m-1],pv[m]].filter(Boolean).find(y=>y.t===X.t);if(nb&&ext(X,nb))pv[pv.indexOf(nb)]=X;else if(!nb&&!pv.length)pv.push(X)}
+  for(let i=0;i+1<pv.length;i++)if(pv[i].t===pv[i+1].t){pv.splice(ext(pv[i],pv[i+1])?i+1:i,1);i--}}
+ return pv}
 function rdCmp(c,t,a,b){const sl=c.slice(Math.min(a,b),Math.max(a,b)+1);
  if(t==='hi'){const pb=Math.min(...sl.map(x=>x.lv)),d=(c[b].hv-c[a].hv)/Math.max(1e-9,c[a].hv-pb);return {d,k:Math.abs(d)<.1?'EH':d>0?'HH':'LH'}}
  const pb=Math.max(...sl.map(x=>x.hv)),d=(c[a].lv-c[b].lv)/Math.max(1e-9,pb-c[a].lv);return {d,k:Math.abs(d)<.1?'EL':d>0?'LL':'HL'}}
 function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null;
  const P=pairs.map(([p])=>({hv:-p.top,lv:-p.bot,x:p.x,top:p.top,bot:p.bot})),V=pairs.map(([,q])=>({hv:-q.top,lv:-q.bot,x:q.x,top:q.top,bot:q.bot}));
- const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max(2,Math.round(slots*[.018,.035,.065][RD.size])),pv=rdPivots(P,k,per),cv=(t,i)=>{let best=i;for(let j=Math.max(0,i-2);j<=Math.min(n-1,i+2);j++)if(t==='hi'?V[j].hv>V[best].hv:V[j].lv<V[best].lv)best=j;return best};
+ const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max([2,4,7][RD.size],Math.round(slots*[.018,.035,.065][RD.size])),pv=rdZig(rdPivots(P,k,per),P,[.05,.12,.2][RD.size]),cv=(t,i)=>{let best=i;for(let j=Math.max(0,i-2);j<=Math.min(n-1,i+2);j++)if(t==='hi'?V[j].hv>V[best].hv:V[j].lv<V[best].lv)best=j;return best};
  const comps=[];for(let m=2;m<pv.length;m++){const a=pv[m-2],b=pv[m];if(a.t!==b.t)continue;const ca=cv(a.t,a.i),cb=cv(b.t,b.i),pP=rdCmp(P,a.t,a.i,b.i),pV=rdCmp(V,a.t,ca,cb);
   comps.push({t:a.t,a:a.i,b:b.i,ca,cb,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(a.t,pP.k,pV.k)})}
  const H=[...comps].reverse().find(c=>c.t==='hi'),L=[...comps].reverse().find(c=>c.t==='lo');
- return {P,V,n,k,pv,comps,H,L,latest:H&&L?(H.b>L.b?H:L):H||L}}
+ /* the level being tested: when the latest swing went past the previous one, look further back for the first earlier swing at or beyond it */
+ const lvl=c=>{if(!c||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;for(let m=pv.length-1;m>=0;m--){const a=pv[m];if(a.t!==c.t||a.i>=c.a)continue;const pP=rdCmp(P,c.t,a.i,c.b);if(pP.k===(c.t==='hi'?'HH':'LL'))continue;
+   const ca=cv(c.t,a.i),pV=rdCmp(V,c.t,ca,c.cb);return {t:c.t,a:a.i,b:c.b,ca,cb:c.cb,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(c.t,pP.k,pV.k),lvl:1}}return null};
+ return {P,V,n,k,pv,comps,H,L,H2:lvl(H),L2:lvl(L),latest:H&&L?(H.b>L.b?H:L):H||L}}
 async function rdRun(){RD.err=null;RD.out=null;
- try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;if(RD.split==null)RD.split=rdSplit(D);
+ try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;
+   if(RD.crop){const c=RD.crop,X0=Math.round(c.x0*D.w),X1=Math.round(c.x1*D.w),Y0=Math.round(c.y0*D.h),Y1=Math.round(c.y1*D.h);for(let y=0;y<D.h;y++)for(let x=0;x<D.w;x++)if(x<X0||x>X1||y<Y0||y>Y1)D.cls[y*D.w+x]=0}
+   if(RD.split==null)RD.split=RD.crop?rdSplit(D,Math.round(RD.crop.y0*D.h),Math.round(RD.crop.y1*D.h)):rdSplit(D);
    const pp=rdPrep(D,0,RD.split),pv=rdPrep(D,RD.split,D.h),a=rdPeriod(pp.occ),b=rdPeriod(pv.occ),per=(a.conf>=b.conf?a:b).per;RD.dbg={a,b};
    const gP=rdGrid(D,0,RD.split,per,pp),gV=rdGrid(D,RD.split,D.h,per,pv),bP=rdCandles(D,0,RD.split),bV=rdCandles(D,RD.split,D.h,bP.per);
    const gPr=rdPair(gP,gV,D.w,D.w,true),bPr=rdPair(bP,bV,D.w,D.w,true),q=(pr,P)=>pr.length<12||!P.per?0:pr.length/Math.max(pr.length,(P[P.length-1].x-P[0].x)/P.per+1);
@@ -2084,13 +2103,14 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
  const u=Math.max(1,D.w/700);x.fillStyle='rgba(20,19,16,.35)';x.fillRect(0,0,D.w,D.h);x.drawImage(D.img,0,0,D.w,D.h);x.fillStyle='rgba(20,19,16,.28)';x.fillRect(0,0,D.w,D.h);
  const o=RD.out;for(const pn of panes){const S=pn.w==='P'?o.P:o.V,cmpI=(c,w)=>w==='P'?[c.a,c.b]:[c.ca,c.cb];
   if(RD.dots)for(const s of S){x.fillStyle='rgba(224,173,37,.9)';x.fillRect(s.x-u,s.top-u,2*u,2*u);x.fillRect(s.x-u,s.bot-u,2*u,2*u)}
-  const show=RD.all?o.comps:[o.H,o.L].filter(Boolean);
+  const show=RD.all?o.comps:[o.H2,o.L2,o.H,o.L].filter(Boolean);
   for(const c of show){const [i,j]=cmpI(c,pn.w),hi=c.t==='hi',y=k=>(hi?S[k].top-4*u:S[k].bot+4*u),key=pn.w==='P'?c.pk:c.ck,d=pn.w==='P'?c.dP:c.dV,main=c===o.H||c===o.L;
    x.lineCap='round';x.strokeStyle='rgba(20,19,16,.85)';x.lineWidth=(main?7:5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();
-   x.strokeStyle=main?'#e0ad25':'rgba(224,173,37,.75)';x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();
+   x.strokeStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'rgba(224,173,37,.75)';if(c.lvl)x.setLineDash([9*u,6*u]);x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();x.setLineDash([]);
    for(const k of [i,j]){x.save();x.translate(S[k].x,y(k));x.rotate(Math.PI/4);x.fillStyle='#e0ad25';x.strokeStyle='#141310';x.lineWidth=1.5*u;x.fillRect(-4.5*u,-4.5*u,9*u,9*u);x.strokeRect(-4.5*u,-4.5*u,9*u,9*u);x.restore()}
-   const txt=`${key} ${Math.abs(Math.round(d*100))}%${c===o.latest&&main?' · latest':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u);
-   x.fillStyle='rgba(20,19,16,.85)';x.fillRect(mx-4*u,my-14*u*(main?1:.8),tw+8*u,(main?19:15)*u);x.fillStyle=main?'#e0ad25':'#e8e2cf';x.fillText(txt,mx,my)}}
+   const txt=`${key} ${Math.abs(Math.round(d*100))}%${c===o.latest&&main?' · latest':''}${c.lvl?' · the level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
+   x.fillStyle='rgba(20,19,16,.85)';x.fillRect(mx-4*u,my-14*u*(main?1:.8),tw+8*u,(main?19:15)*u);x.fillStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'#e8e2cf';x.fillText(txt,mx,my)}}
+ if(RD.mode==='one'&&RD.crop){const c=RD.crop;x.strokeStyle='#e8e2cf';x.lineWidth=2*u;x.setLineDash([10*u,6*u]);x.strokeRect(c.x0*D.w,c.y0*D.h,(c.x1-c.x0)*D.w,(c.y1-c.y0)*D.h);x.setLineDash([])}
  if(RD.mode==='one'){x.strokeStyle='rgba(224,173,37,.8)';x.setLineDash([8*u,6*u]);x.lineWidth=1.5*u;x.beginPath();x.moveTo(0,RD.split);x.lineTo(D.w,RD.split);x.stroke();x.setLineDash([])}
  return c}
 function rdLine(c,lab){if(!c)return '';const e=G[c.t][c.pk+'|'+c.ck],id=`${c.t}:${c.pk}|${c.ck}`,de=DEX[DEXI[id]],pc=d=>Math.abs(Math.round(d*100))+'%';
@@ -2105,23 +2125,26 @@ function scanScreen(){const o=RD.out;
  <button class="btn wide" id="rdtry" style="margin-top:8px">Try it on a made-up chart</button>`;
  let body='';
  if(RD.busy)body='<div class="panel"><p class="q">Reading the picture…</p></div>';
- else if(RD.err)body=`<div class="panel"><p class="verdict no" style="font-size:20px">Couldn't read it</p><p>${RD.err}</p></div>`;
+ else if(RD.err)body=`<div class="panel"><p class="verdict no" style="font-size:20px">Couldn't read it</p><p>${RD.err}</p>${RD.mode==='one'&&RD.D1?`<div class="panel rdpics" id="rdpics"></div><button class="btn wide" data-rdcrop="1" aria-pressed="${!!RD.cropping}">${RD.cropping?'Drag a box around the candles…':'Mark the chart area'}</button>`:''}</div>`;
  else if(o){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?structLean(st&&st.read,[o.H,o.L].map(c=>({...c,k:c.b}))):null;
   body=`<div class="panel rdpics" id="rdpics"></div>
   <div class="lab">Swing size</div>${`<div class="row seg">${[['0','Small'],['1','Medium'],['2','Large']].map(([v,l])=>`<button class="btn" data-rdsz="${v}" aria-pressed="${RD.size==+v}">${l}</button>`).join('')}</div>`}
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rdall="0" aria-pressed="${!RD.all}">Latest highs and lows</button><button class="btn" data-rdall="1" aria-pressed="${RD.all}">Every swing</button></div>
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rddots="1" aria-pressed="${!!RD.dots}">Show the candles it found</button></div>
+  ${RD.mode==='one'?`<div class="row seg" style="margin-top:6px"><button class="btn" data-rdcrop="1" aria-pressed="${!!RD.cropping}">${RD.cropping?'Drag a box around the candles…':'Mark the chart area'}</button>${RD.crop?'<button class="btn" data-rdcrop="clear">Use the whole picture</button>':''}</div>`:''}
   ${RD.mode==='one'?`<div class="lab">Divider between price and CVD</div><input type="range" id="rdsplit" min="${Math.round(RD.D1.h*.15)}" max="${Math.round(RD.D1.h*.9)}" value="${RD.split}" style="width:100%">`:''}
   <div class="panel dex">
    <p class="m">${o.n} candles lined up in both windows · ${o.pv.length} swings at this size · being tested now: the latest ${o.latest?(o.latest.t==='hi'?'high':'low'):'swing'}.</p>
-   ${rdLine(o.H,'Highs · last two')}${rdLine(o.L,'Lows · last two')}
+   ${rdLine(o.H,'Highs · last two')}${o.H2?rdLine(o.H2,'Highs · against the earlier high it ran into (white dashes)'):''}${rdLine(o.L,'Lows · last two')}${o.L2?rdLine(o.L2,'Lows · against the earlier low it ran into (white dashes)'):''}
+   ${o.H2||o.L2?'<p class="m">The last two swings are what the game grades. The white-dash read is the bigger picture: the latest swing went past the one before it but only reached an older level, so that level is what it is really testing.</p>':''}
    ${st?`<div class="lab">Together · ${st.read.name}</div><p>${st.read.why}</p>${ov?`<p>Overall it ${ov.lean>0?'leans up':ov.lean<0?'leans down':'has no lean'}${ov.conflict?': the highs and lows disagree, and the latest swing leads':''}.</p>`:''}`:''}
    ${!o.H||!o.L?'<p class="m">Only one side has two swings at this size. Try a smaller swing size.</p>':''}
    <p class="m" style="margin-top:10px">It reads pixels, not data. Check the gold lines sit on the swings you'd pick. If not, change the swing size or crop tighter.</p></div>`}
  $('#screen').innerHTML=head+body;
- if(o&&!RD.busy&&!RD.err){const box=$('#rdpics');if(RD.mode==='one')box.appendChild(rdCanvas(RD.D1,[{w:'P'},{w:'V'}]));else{box.innerHTML='<div class="ph"><h3>Price</h3></div>';box.appendChild(rdCanvas(RD.DP,[{w:'P'}]));box.insertAdjacentHTML('beforeend','<div class="ph" style="margin-top:8px"><h3>CVD</h3></div>');box.appendChild(rdCanvas(RD.DV,[{w:'V'}]))}}
+ if(RD.err&&RD.mode==='one'&&RD.D1&&$('#rdpics')){const c=document.createElement('canvas');c.width=RD.D1.w;c.height=RD.D1.h;c.getContext('2d').drawImage(RD.D1.img,0,0,RD.D1.w,RD.D1.h);$('#rdpics').appendChild(c);rdCropBind(c)}
+ if(o&&!RD.busy&&!RD.err){const box=$('#rdpics');if(RD.mode==='one'){const cv=rdCanvas(RD.D1,[{w:'P'},{w:'V'}]);box.appendChild(cv);rdCropBind(cv)}else{box.innerHTML='<div class="ph"><h3>Price</h3></div>';box.appendChild(rdCanvas(RD.DP,[{w:'P'}]));box.insertAdjacentHTML('beforeend','<div class="ph" style="margin-top:8px"><h3>CVD</h3></div>');box.appendChild(rdCanvas(RD.DV,[{w:'V'}]))}}
  const go=async()=>{RD.busy=true;scanScreen();await new Promise(r=>setTimeout(r,30));await rdRun();RD.busy=false;scanScreen()};
- $('#rd1').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{RD.src=await rdLoad(f);RD.mode='one';RD.split=null;go()}catch(er){RD.err=er.message;scanScreen()}};
+ $('#rd1').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{RD.src=await rdLoad(f);RD.mode='one';RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}catch(er){RD.err=er.message;scanScreen()}};
  /* pasted pictures live in memory, so they can be read even where picked files can't */
  const takeImg=async im=>{if(!im)return null;try{const r=await fetch(im.src);const b=await r.blob();if(b.size)return b}catch(e){}
   try{if(!im.complete)await new Promise((ok,no)=>{im.onload=ok;im.onerror=no;setTimeout(no,4000)});if(im.naturalWidth){const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;c.getContext('2d').drawImage(im,0,0);c.getContext('2d').getImageData(0,0,1,1);return c}}catch(e){}return null};
@@ -2131,21 +2154,32 @@ function scanScreen(){const o=RD.out;
   box.innerHTML='';
   if(!f){RD.err='Nothing readable came through the paste. Copy the picture itself (in Photos: Share › Copy), then paste.';scanScreen();return}
   try{const src=f instanceof HTMLCanvasElement?f:await rdLoad(f);
-   if(!two){RD.src=src;RD.mode='one';RD.split=null;go()}
+   if(!two){RD.src=src;RD.mode='one';RD.split=null;if(RD.demoSz){RD.size=1;RD.demoSz=false}RD.crop=null;RD.cropping=false;go()}
    else if(!RD.pendP){RD.pendP=src;RD.err=null;RD.out=null;scanScreen();toast('Price picture in','Now paste the CVD picture','',()=>SFX.place())}
-   else{RD.P=RD.pendP;RD.V=src;RD.pendP=null;RD.mode='two';go()}}catch(er){RD.err=er.message;scanScreen()}};
+   else{RD.P=RD.pendP;RD.V=src;RD.pendP=null;RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
  for(const [id,two] of [['#rp1',false],['#rp2',true]]){const b=$(id);if(b){b.addEventListener('paste',e=>onPaste(e,two));b.addEventListener('keydown',e=>{if(!(e.metaKey||e.ctrlKey))e.preventDefault()})}}
  $('#rd2').onchange=async e=>{const fs=[...e.target.files];if(!fs.length)return;
-  try{if(fs.length>=2){RD.P=await rdLoad(fs[0]);RD.V=await rdLoad(fs[1]);RD.mode='two';go()}else if(!RD.pendP){RD.pendP=await rdLoad(fs[0]);RD.err=null;RD.out=null;$('#screen').insertAdjacentHTML('afterbegin','');toast('Price picture loaded','Now pick the CVD picture','',()=>SFX.place());}
-   else{RD.P=RD.pendP;RD.V=await rdLoad(fs[0]);RD.pendP=null;RD.mode='two';go()}}catch(er){RD.err=er.message;scanScreen()}};
+  try{if(fs.length>=2){RD.P=await rdLoad(fs[0]);RD.V=await rdLoad(fs[1]);RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}else if(!RD.pendP){RD.pendP=await rdLoad(fs[0]);RD.err=null;RD.out=null;$('#screen').insertAdjacentHTML('afterbegin','');toast('Price picture loaded','Now pick the CVD picture','',()=>SFX.place());}
+   else{RD.P=RD.pendP;RD.V=await rdLoad(fs[0]);RD.pendP=null;RD.mode='two';if(RD.demoSz){RD.size=1;RD.demoSz=false}go()}}catch(er){RD.err=er.message;scanScreen()}};
  const sp=$('#rdsplit');if(sp)sp.onchange=()=>{RD.split=+sp.value;go()};
  $('#screen').onclick=ev=>{const b=ev.target.closest('button');if(!b)return;SFX.click();
-  if(b.id==='rdtry'){rdDemo().then(go)}
+  if(b.id==='rdtry'){RD.size=0;RD.demoSz=true;RD.crop=null;RD.cropping=false;rdDemo().then(go)}
   else if(b.dataset.rdsz!==undefined){RD.size=+b.dataset.rdsz;RD.out=rdAnalyse();scanScreen()}
   else if(b.dataset.rdall!==undefined){RD.all=b.dataset.rdall==='1';scanScreen()}
   else if(b.dataset.rddots){RD.dots=!RD.dots;scanScreen()}
+  else if(b.dataset.rdcrop==='clear'){RD.crop=null;RD.cropping=false;RD.split=null;go()}
+  else if(b.dataset.rdcrop){RD.cropping=!RD.cropping;scanScreen();if(RD.cropping){const pc=$('#rdpics');pc&&pc.scrollIntoView({block:'center',behavior:'smooth'})}}
   else if(b.dataset.dx!==undefined){DV.i=+b.dataset.dx;DV.seed=0;setTab('dex')}
   else if(b.dataset.rdrill!==undefined)drill(DEX[+b.dataset.rdrill])}}
+/* marking the chart area: drag a box on the picture; reading then ignores everything outside it */
+function rdCropBind(cv){if(!RD.cropping)return;cv.style.touchAction='none';cv.style.cursor='crosshair';let st=null;const ov=document.createElement('div');ov.className='rdbox';cv.parentElement.style.position='relative';cv.parentElement.appendChild(ov);
+ const pt=e=>{const r=cv.getBoundingClientRect();return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)),r}};
+ const show=(a,b)=>{const r=cv.getBoundingClientRect(),pr=cv.parentElement.getBoundingClientRect();ov.style.left=(r.left-pr.left+Math.min(a.x,b.x)*r.width)+'px';ov.style.top=(r.top-pr.top+Math.min(a.y,b.y)*r.height)+'px';ov.style.width=Math.abs(a.x-b.x)*r.width+'px';ov.style.height=Math.abs(a.y-b.y)*r.height+'px';ov.style.display='block'};
+ cv.onpointerdown=e=>{e.preventDefault();cv.setPointerCapture(e.pointerId);st=pt(e);show(st,st)};
+ cv.onpointermove=e=>{if(st)show(st,pt(e))};
+ cv.onpointerup=e=>{if(!st)return;const en=pt(e),c={x0:Math.min(st.x,en.x),x1:Math.max(st.x,en.x),y0:Math.min(st.y,en.y),y1:Math.max(st.y,en.y)};st=null;
+  if(c.x1-c.x0<.08||c.y1-c.y0<.08){ov.style.display='none';return}RD.crop=c;RD.cropping=false;RD.split=null;SFX.place();
+  RD.busy=true;scanScreen();setTimeout(async()=>{await rdRun();RD.busy=false;scanScreen()},30)}}
 /* a made-up chart drawn like a dark-theme screenshot, so the reader can be tried (and tested) without a picture */
 function rdDemo(){const types=typesEnding(9,pick(['h','l'])),kP=types.map((ty,k)=>k<2?null:rkey(ty)),kV=types.map((ty,k)=>k<2?null:rkey(ty));let ch=null;for(let a=0;a<20&&!ch;a++)ch=genChart(types,kP,kV,false,new Set([types.length-1,types.length-2]));
  RD.demo={types,kP,kV,ch};const n=ch.n,W=900,H=760,c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');x.fillStyle='#262626';x.fillRect(0,0,W,H);
@@ -2602,7 +2636,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795739651';
+window.APPV='1795740838';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
