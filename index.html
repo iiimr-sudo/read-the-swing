@@ -2002,9 +2002,16 @@ function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let
  /* each pixel is compared with the background next to it on its row: the darkest pixel within a few candles either side
     (the lightest on a light theme). A reflection of a hand, a lamp or a window adds light to everything there, background
     included, so subtracting that background leaves only the candles; a broad coloured patch leaves nothing */
- const R=Math.max(12,Math.round(w*.02)),env=new Int32Array(w),lum=new Float32Array(w),q=new Int32Array(w);
+ /* long vertical lines (the chart's border, a crosshair, dashed or not): a column that stands out from the columns 3 pixels
+    either side over a large part of the picture's height. Screen moiré makes stripes too, but faint ones; these are strong.
+    They are never taken as the background, wicks are never followed along them, and their pixels don't count as candle */
+ {const vl=new Uint8Array(w),L=(x,y)=>{const k=(y*w+x)*4;return d[k]*.3+d[k+1]*.59+d[k+2]*.11};
+  for(let x=3;x<w-3;x++){let n=0;for(let y=0;y<h;y+=2){const c=L(x,y),a=L(x-3,y),b=L(x+3,y);if(Math.abs(a-b)<15&&Math.abs(c-(a+b)/2)>28)n++}if(n>h*.5*.45)vl[x]=1}
+  for(let x=1;x<w-1;x++)if(vl[x]){D.vl=D.vl||new Uint8Array(w);D.vl[x-1]=D.vl[x]=D.vl[x+1]=1}}
+ const R=Math.max(12,Math.round(w*.02)),env=new Int32Array(w),lum=new Float32Array(w),q=new Int32Array(w),VL=D.vl;
  for(let y=0;y<h;y++){const o=y*w;for(let x=0;x<w;x++){const k=(o+x)*4,l=d[k]*.3+d[k+1]*.59+d[k+2]*.11;lum[x]=dark?l:-l}
-  /* sliding minimum with a deque: env[x] = position of the darkest pixel in [x-R, x+R] */
+  /* sliding minimum with a deque: env[x] = position of the darkest pixel in [x-R, x+R], skipping long vertical lines */
+  if(VL)for(let x=0;x<w;x++)if(VL[x])lum[x]=1e9;
   let qh=0,qt=0;for(let x=0;x<w+R;x++){if(x<w){while(qt>qh&&lum[q[qt-1]]>=lum[x])qt--;q[qt++]=x}const c=x-R;if(c>=0){while(q[qh]<c-R)qh++;env[c]=q[qh]}}
   for(let x=0;x<w;x++){const i=o+x,k=i*4,ek=(o+env[x])*4,r=d[k],g=d[k+1],bl=d[k+2],er=d[ek],eg=d[ek+1],eb=d[ek+2],[hh,s,v]=rdHsv(r,g,bl),dd=Math.abs(r-er)+Math.abs(g-eg)+Math.abs(bl-eb);
    /* a green candle under a warm lamp cast turns yellow-green: on a dark screen it still counts when green is clearly what it
@@ -2019,6 +2026,7 @@ function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let
  {const cnt=new Int32Array(h);for(let y=0;y<h;y++){let n=0;const o=y*w;for(let x=0;x<w;x++){const c=cls[o+x];if(c===1||c===2)n++}cnt[y]=n}
   for(let y=3;y<h-3;y++){const n=cnt[y];if(n<Math.max(20,w*.05))continue;const nb=Math.max(cnt[y-3],cnt[y+3]);if(nb>n*.35)continue;
    for(let yy=y-1;yy<=y+1;yy++){const o=yy*w;for(let x=0;x<w;x++){const c=cls[o+x];if((c===1||c===2)&&cls[o-3*w+x]!==c&&cls[o+3*w+x]!==c)cls[o+x]=0}}}}
+ if(D.vl)for(let y=0;y<h;y++){const o=y*w;for(let x=2;x<w-2;x++)if(D.vl[x]){const c=cls[o+x];if(c&&cls[o+x-2]!==c&&cls[o+x+2]!==c)cls[o+x]=0}}
  D.cls=cls;D.dark=dark;return D}
 /* a wick over a coloured background (a session box, a highlight): the pixel stands out from the background on both sides, and those two sides match each other */
 /* follow a wick away from a body (dir -1 up, +1 down). Pixels the colour classes already call wick or this candle's colour count;
@@ -2031,7 +2039,7 @@ function rdTrace(D,x,from,dir,lim,c,hw,gapMax){const {w,d,cls,dark}=D;gapMax=gap
     screen). How much it must stand out scales with how much the background ripples there (screen moiré). Short breaks are
     bridged */
  const sideAt=(o,a)=>{let r=0,g=0,b=0;for(let q=0;q<3;q++){const k=(o+a+q)*4;r+=d[k];g+=d[k+1];b+=d[k+2]}r/=3;g/=3;b/=3;let v=0;for(let q=0;q<3;q++){const k=(o+a+q)*4;v+=Math.abs(d[k]-r)+Math.abs(d[k+1]-g)+Math.abs(d[k+2]-b)}return [r,g,b,v/3]};
- const score=(xx,yy)=>{if(xx-hw-3<0||xx+hw+3>=w)return 0;const o=yy*w,i=o+xx,cc=cls[i];if(cls[i-hw]===c||cls[i+hw]===c)return 0;if(cc===3||cc===c)return 999;
+ const score=(xx,yy)=>{if(xx-hw-3<0||xx+hw+3>=w||(D.vl&&D.vl[xx]))return 0;const o=yy*w,i=o+xx,cc=cls[i];if(cls[i-hw]===c||cls[i+hw]===c)return 0;if(cc===3||cc===c)return 999;
   const L=sideAt(o,xx-hw-2),R=sideAt(o,xx+hw);if(Math.abs(L[0]-R[0])+Math.abs(L[1]-R[1])+Math.abs(L[2]-R[2])>50)return 0;
   const k=i*4,dr=d[k]-(L[0]+R[0])/2,dg=d[k+1]-(L[1]+R[1])/2,db=d[k+2]-(L[2]+R[2])/2,mag=Math.abs(dr)+Math.abs(dg)+Math.abs(db),need=Math.max(24,2.2*Math.max(L[3],R[3])+10);
   if(mag<need)return 0;const lum=.3*dr+.59*dg+.11*db,grey=Math.max(dr,dg,db)-Math.min(dr,dg,db)<mag*.35;
@@ -2058,6 +2066,11 @@ function rdChain(C,minDx,ph){const n=C.length;if(n<3)return C;const hs=C.map(g=>
  let e=0;for(let i=1;i<n;i++)if(best[i]>best[e])e=i;const out=[];for(let i=e;i>=0;i=prev[i])out.push(C[i]);out.reverse();
  /* an end of the chain that only hangs on by a long jump is not part of the path */
  const jump=(A,B)=>Math.max(0,A.top-B.bot,B.top-A.bot);while(out.length>3&&jump(out[out.length-1],out[out.length-2])>tol)out.pop();while(out.length>3&&jump(out[0],out[1])>tol)out.shift();
+ /* the ends again, more strictly: within the last (or first) three candles, a candle that floats clear of the one next to
+    it by more than a fifth of the window's height is junk picked up past the real chart (a box edge, a label), and so is
+    everything beyond it */
+ if(out.length>8){const far=(A,B)=>jump(A,B)>ph*.2;for(let j=out.length-1;j>=Math.max(1,out.length-3);j--)if(far(out[j],out[j-1])){out.length=j;break}
+  for(let j=1;j<=Math.min(3,out.length-2);j++)if(far(out[j-1],out[j])){out.splice(0,j);break}}
  return out}
 function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
  for(let y=y0;y<y1;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}if(n>w*.6)mask[y-y0]=1}
@@ -2194,8 +2207,8 @@ function rdZig(pv,c,f){const rg=Math.max(...c.map(x=>x.hv))-Math.min(...c.map(x=
    candles never make a swing on their own. Follow the tail as a zigzag with the same minimum move and a minimum width: an extreme beyond the last
    swing extends it, a big enough move the other way starts a new one. These swings are marked as still forming */
 function rdTail(pv,c,f,gap){if(!pv.length||RD.noTail)return pv;const rg=Math.max(...c.map(x=>x.hv))-Math.min(...c.map(x=>x.lv)),thr=f*rg;pv=pv.slice();let e={...pv[pv.length-1]};
- /* turning needs a real move: the minimum, and at least 40% of the leg that made the current extreme */
- const need=()=>{const q=pv[pv.length-2];return Math.max(thr,q?Math.abs(e.v-q.v)*.4:0)};
+ /* turning needs a real move: the minimum, and at least half of the leg that made the current extreme, and as many candles as the swing size needs */
+ const need=()=>{const q=pv[pv.length-2];return Math.max(thr,q?Math.abs(e.v-q.v)*.5:0)};
  for(let i=e.i+1;i<c.length;i++){if(e.t==='hi'){if(c[i].hv>e.v){e={t:'hi',i,v:c[i].hv,prov:true,isNew:e.isNew};pv[pv.length-1]=e}else if(e.v-c[i].lv>=need()&&i-e.i>=gap){e={t:'lo',i,v:c[i].lv,prov:true,isNew:true};pv.push(e)}}
   else{if(c[i].lv<e.v){e={t:'lo',i,v:c[i].lv,prov:true,isNew:e.isNew};pv[pv.length-1]=e}else if(c[i].hv-e.v>=need()&&i-e.i>=gap){e={t:'hi',i,v:c[i].hv,prov:true,isNew:true};pv.push(e)}}}
  /* a new swing still running at the right edge, with no turn after it yet, only counts once it has already gone past the
@@ -2212,7 +2225,7 @@ function rdRel(t,pP,pV){const a=pP.d,b=pV.d;if(!(a*b>0))return [pP,pV];const A=M
  if(B<.35&&B<.6*A&&pV.k!==E)return [pP,{...pV,k:E,rel:true}];if(A<.35&&A<.6*B&&pP.k!==E)return [{...pP,k:E,rel:true},pV];return [pP,pV]}
 function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null;
  const P=pairs.map(([p])=>({hv:-p.top,lv:-p.bot,x:p.x,top:p.top,bot:p.bot})),V=pairs.map(([,q])=>({hv:-q.top,lv:-q.bot,x:q.x,top:q.top,bot:q.bot}));
- const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max([2,4,7][RD.size],Math.round(slots*[.018,.035,.065][RD.size])),pv=rdTail(rdZig(rdPivots(P,k,per),P,[.05,.12,.2][RD.size]),P,[.05,.12,.2][RD.size],Math.max(2,Math.ceil(k/2))),cv=(t,i)=>{
+ const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max([2,4,7][RD.size],Math.round(slots*[.018,.035,.065][RD.size])),pv=rdTail(rdZig(rdPivots(P,k,per),P,[.05,.12,.2][RD.size]),P,[.05,.12,.2][RD.size],Math.max(2,k)),cv=(t,i)=>{
   /* CVD's own swing for this price swing: CVD often peaks a few candles before or after price does. Its extreme is looked for
      within the swing-size window around the price swing, but never past the price swings on either side (so it stays in the
      same leg) */
@@ -2224,7 +2237,10 @@ function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null
  /* the level being tested: when the latest swing went past the previous one, look further back for the first earlier swing at or beyond it */
  const lvl=c=>{if(!c||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;for(let m=pv.length-1;m>=0;m--){const a=pv[m];if(a.t!==c.t||a.i>=c.a)continue;const pP0=rdCmp(P,c.t,a.i,c.b);if(pP0.k===(c.t==='hi'?'HH':'LL'))continue;
    const ca=cv(c.t,a.i),[pP,pV]=rdRel(c.t,pP0,rdCmp(V,c.t,ca,c.cb));return {t:c.t,a:a.i,b:c.b,ca,cb:c.cb,relP:!!pP.rel,relV:!!pV.rel,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(c.t,pP.k,pV.k),lvl:1}}return null};
- return {P,V,n,k,pv,comps,H,L,H2:lvl(H),L2:lvl(L),latest:H&&L?(H.b>L.b?H:L):H||L}}
+ /* when the latest swing went past the last one but only reached an older swing, that older swing is the level being
+    tested and the read is made against it; the last two swings are kept as the small read */
+ const sw=(c,lv)=>lv?[{...lv,lvl:0,level:true},{...c,lvl:1,minor:true}]:[c,null],[Hm,Hs]=sw(H,lvl(H)),[Lm,Ls]=sw(L,lvl(L));
+ return {P,V,n,k,pv,comps,H:Hm,L:Lm,H2:Hs,L2:Ls,latest:Hm&&Lm?(Hm.b>Lm.b?Hm:Lm):Hm||Lm}}
 async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
  try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;
    if(RD.crop){const c=RD.crop,X0=Math.round(c.x0*D.w),X1=Math.round(c.x1*D.w),Y0=Math.round(c.y0*D.h),Y1=Math.round(c.y1*D.h);for(let y=0;y<D.h;y++)for(let x=0;x<D.w;x++)if(x<X0||x>X1||y<Y0||y>Y1)D.cls[y*D.w+x]=0}
@@ -2257,7 +2273,7 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
    x.lineCap='round';x.strokeStyle='rgba(20,19,16,.85)';x.lineWidth=(main?7:5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();
    x.strokeStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'rgba(224,173,37,.75)';if(c.lvl)x.setLineDash([9*u,6*u]);x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();x.setLineDash([]);
    for(const k of [i,j]){x.save();x.translate(S[k].x,y(k));x.rotate(Math.PI/4);x.fillStyle='#e0ad25';x.strokeStyle='#141310';x.lineWidth=1.5*u;x.fillRect(-4.5*u,-4.5*u,9*u,9*u);x.strokeRect(-4.5*u,-4.5*u,9*u,9*u);x.restore()}
-   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main?' · forming':''}${c.lvl?' · the level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
+   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main?' · forming':''}${c.minor?' · last swing':c.level?' · the level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
    x.fillStyle='rgba(20,19,16,.85)';x.fillRect(mx-4*u,my-14*u*(main?1:.8),tw+8*u,(main?19:15)*u);x.fillStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'#e8e2cf';x.fillText(txt,mx,my)}}
  if(RD.mode==='one'&&RD.crop){const c=RD.crop;x.strokeStyle='#e8e2cf';x.lineWidth=2*u;x.setLineDash([10*u,6*u]);x.strokeRect(c.x0*D.w,c.y0*D.h,(c.x1-c.x0)*D.w,(c.y1-c.y0)*D.h);x.setLineDash([])}
  if(RD.mode==='one'){x.strokeStyle='rgba(224,173,37,.8)';x.setLineDash([8*u,6*u]);x.lineWidth=1.5*u;x.beginPath();x.moveTo(0,RD.split);x.lineTo(D.w,RD.split);x.stroke();x.setLineDash([])}
@@ -2302,7 +2318,7 @@ function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" d
  else{const fs=jrStats(e=>e.lvl===lvl&&!!e.lean===!!lean);if(fs.n>=5)rec=`Your ${(firm||'sideways').toLowerCase()} reads: ${fs.ok} of ${fs.n} right (${hz} min)`}
  const pos=RD.mode==='one'&&RD.D1&&RD.split?`style="top:calc(8px + ${(RD.split/RD.D1.h*100).toFixed(1)}%);transform:translateY(-50%)"`:'';
  return `<div class="rdlean l${lvl} ${lean>0?'up':lean<0?'dn':'fl'}" ${pos}><button class="rdx" data-rdlean="0" aria-label="Hide">×</button><svg viewBox="-22 -22 44 44" aria-hidden="true">${rdArrow(lean,lvl)}</svg>
-  ${head?`<span class="firm">${head}</span>`:''}<b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}${agreeTxt?`<span class="agree">${agreeTxt}</span>`:''}<span class="why">${rdEsc(why)}.${big>0?' The bigger picture agrees.':big<0?' The bigger picture disagrees.':''}</span>${rec?`<span class="rec">${rec}</span>`:''}</div>`}
+  ${head?`<span class="firm">${head}</span>`:''}<b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}${agreeTxt?`<span class="agree">${agreeTxt}</span>`:''}<span class="why">${rdEsc(why)}.${big>0?' The last small swing agrees.':big<0?' The last small swing disagrees.':''}</span>${rec?`<span class="rec">${rec}</span>`:''}</div>`}
 
 /* ---------- scan journal: each logged read, and what price did next ---------- */
 function jrList(){if(!Array.isArray(S.jr))S.jr=[];if(S.jr.some(e=>!e||typeof e.id!=='string'||!/^[a-z0-9]+$/.test(e.id)))S.jr=S.jr.filter(e=>e&&typeof e.id==='string'&&/^[a-z0-9]+$/.test(e.id));return S.jr}
@@ -2359,8 +2375,8 @@ function scanScreen(){const o=RD.out,nOpen=jrOpen();
   ${RD.mode==='one'?`<div class="lab">Divider between price and CVD</div><input type="range" id="rdsplit" min="${Math.round(RD.D1.h*.15)}" max="${Math.round(RD.D1.h*.9)}" value="${RD.split}" style="width:100%">`:''}
   <div class="panel dex">
    <p class="m">${o.n} candles lined up in both windows · ${o.pv.length} swings at this size · being tested now: the latest ${o.latest?(o.latest.t==='hi'?'high':'low'):'swing'}.</p>
-   ${rdLine(o.H,'Highs · last two')}${o.H2?rdLine(o.H2,'Highs · against the earlier high it ran into (white dashes)'):''}${rdLine(o.L,'Lows · last two')}${o.L2?rdLine(o.L2,'Lows · against the earlier low it ran into (white dashes)'):''}
-   ${o.H2||o.L2?'<p class="m">The last two swings are what the game grades. The white-dash read is the bigger picture: the latest swing went past the one before it but only reached an older level, so that level is what it is really testing.</p>':''}
+   ${rdLine(o.H,o.H&&o.H.level?'Highs · against the high it is testing':'Highs · last two')}${o.H2?rdLine(o.H2,'Highs · the last two swings (white dashes)'):''}${rdLine(o.L,o.L&&o.L.level?'Lows · against the low it is testing':'Lows · last two')}${o.L2?rdLine(o.L2,'Lows · the last two swings (white dashes)'):''}
+   ${o.H2||o.L2?'<p class="m">The latest swing went past the swing before it but only reached an older one, so the read is made against that older swing: it is the level being tested. The white dashes are the small read between the last two swings.</p>':''}
    ${st?`<div class="lab">Together · ${st.read.name}</div><p>${st.read.why}</p>${ov?`<p>Overall it ${ov.lean>0?'leans up':ov.lean<0?'leans down':'has no lean'}${ov.conflict?': the highs and lows disagree, and the latest swing leads':''}.</p>`:''}`:''}
    ${!o.H||!o.L?'<p class="m">Only one side has two swings at this size. Try a smaller swing size.</p>':''}
    <p class="m" style="margin-top:10px">It reads pixels, not data. Check the gold lines sit on the swings you'd pick. If not, change the swing size or crop tighter.</p></div>`}
@@ -2872,7 +2888,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795799480';
+window.APPV='1795800856';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
