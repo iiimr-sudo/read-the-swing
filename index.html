@@ -399,6 +399,12 @@ function structRead(hk,lk,chk,clk){
  if(pH===0&&pL===0){if(cH>=0&&cL>=0&&cS>0)return {cat:'abs',name:'Absorption at the offer, across the range',lean:-1,why:'Price is boxed in while CVD climbs: buying goes in and price doesn\'t move.'};
   if(cH<=0&&cL<=0&&cS<0)return {cat:'abs',name:'Absorption at the bid, across the range',lean:1,why:'Price is boxed in while CVD falls: selling goes in and price doesn\'t move.'};
   if(cH===0&&cL===0)return {cat:'bal',name:'Balance',lean:0,why:'Equal highs and equal lows on both windows. Nobody is winning; no edge until the range breaks with CVD.'}}
+ /* one extreme shows effort and result coming apart while the other only looks healthy: the extreme where price is failing decides */
+ {const xH=catOf(hk,chk),xL=catOf(lk,clk),dv=c=>c==='abs'||c==='exh';
+  if(dv(xH)&&!dv(xL)){if(xH==='abs')return {cat:'abs',name:'Absorption at the top',lean:-1,why:'CVD keeps pushing past its last high while price stalls at its own. Buyers are being absorbed at the offer. Rising lows don\'t save it: they are the same buyers getting more aggressive into the wall, and when they give up the move goes down.'};
+   return {cat:'exh',name:'Exhaustion at the highs',lean:-1,why:'Price is still rising, but only CVD\'s highs are lower; its lows held. The last push is running out of buyers, not sellers taking over.'}}
+  if(dv(xL)&&!dv(xH)){if(xL==='abs')return {cat:'abs',name:'Absorption at the bottom',lean:1,why:'CVD keeps pushing past its last low while price holds at its own. Sellers are being absorbed at the bid. Falling highs don\'t save it: they are the same sellers getting more aggressive into the floor, and when they give up the move goes up.'};
+   return {cat:'exh',name:'Exhaustion at the lows',lean:1,why:'Price is still falling, but only CVD\'s lows are higher; its highs didn\'t rise. The last drop ran out of sellers.'}}}
  if(pS!==0&&Math.sign(pS)===Math.sign(cS)&&pH*cH>=0&&pL*cL>=0)return {cat:'cont',name:pS>0?'Initiative buying':'Initiative selling',lean:Math.sign(pS),why:'Effort and result agree on the structure. Trade with it until a swing shows exhaustion or absorption.'};
  return {cat:'none',name:'No clean read',lean:0,why:'Price\'s structure and CVD\'s structure don\'t line up into one known form. Read the swings one at a time.'}}
 const STRUCTS=[];for(const a of KEYS.hi)for(const b of KEYS.lo)for(const c of KEYS.hi)for(const d of KEYS.lo)STRUCTS.push({hk:a,lk:b,chk:c,clk:d,read:structRead(a,b,c,d)});
@@ -460,7 +466,10 @@ const allComps=(ch,types,kP,kV)=>types.map((_,k)=>k<2?null:item(ch,types,k,kP,kV
 function trendAt(types,kP,k){const a=k-1>=2?SC[kP[k-1]]:null,b=k-2>=2?SC[kP[k-2]]:null;const xs=[a,b].filter(x=>x!==null);if(!xs.length)return 0;
  if(xs.every(x=>x>=0)&&xs.some(x=>x>0))return 1;if(xs.every(x=>x<=0)&&xs.some(x=>x<0))return -1;return 0}
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
-function overall(its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),L=its.map(i=>i.lean);if(L[0]===L[1])return {lean:L[0],rec,conflict:false};if(!L[0])return {lean:L[1],rec,conflict:false};if(!L[1])return {lean:L[0],rec,conflict:false};return {lean:rec.lean,rec,conflict:true}}
+/* the overall lean of a highs-and-lows pair: a named structure decides; with no named form, a lone divergence decides; otherwise the latest swing */
+function structLean(read,its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),agree=its[0].lean===its[1].lean;if(read&&read.cat!=='none')return {lean:read.lean,rec,conflict:!agree,by:'form'};return overall(its)}
+function overall(its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),L=its.map(i=>i.lean),dv=i=>i.cat==='abs'||i.cat==='exh';if(L[0]===L[1])return {lean:L[0],rec,conflict:false};
+ const d=its.filter(dv);if(d.length===1)return {lean:d[0].lean,rec,conflict:true,by:'div',div:d[0]};if(!L[0])return {lean:L[1],rec,conflict:false};if(!L[1])return {lean:L[0],rec,conflict:false};return {lean:rec.lean,rec,conflict:true,by:'latest'}}
 
 /* ---------- rounds ---------- */
 function pickCat(list){const f=CFG.focus&&CFG.focus.length?CFG.focus:list;const fl=f.filter(c=>list.includes(c));return fl.length&&fl.length<list.length&&chance(.65)?pick(fl):pick(list)}
@@ -476,7 +485,7 @@ function genStruct(){const hard=CFG.hard,cat=pickCat(['abs','exh','cont','bal','
   const kP=types.map((ty,k)=>k<2?null:k>=m-2?(ty==='h'?S.hk:S.lk):rkey(ty)),kV=types.map((ty,k)=>k<2?null:k>=m-2?(ty==='h'?S.chk:S.clk):rkey(ty));
   const ch=genChart(types,kP,kV,hard,new Set([m-1,m-2]));if(!ch)continue;
   const its=[m-2,m-1].map(k=>item(ch,types,k,kP,kV)).sort((x,y)=>x.t==='hi'?-1:1);
-  const ov=overall(its);return {kind:'struct',...ch,types,kP,kV,comps:allComps(ch,types,kP,kV),stages:[{vis:ch.n,q:'struct',items:its,read:S.read,lean:ov.lean,rec:ov.rec.t,conflict:ov.conflict,trend:trendAt(types,kP,m-2)}]}}return null}
+  const ov=structLean(S.read,its);return {kind:'struct',...ch,types,kP,kV,comps:allComps(ch,types,kP,kV),stages:[{vis:ch.n,q:'struct',items:its,read:S.read,lean:ov.lean,rec:ov.rec.t,conflict:ov.conflict,by:ov.by,divT:ov.div&&ov.div.t,trend:trendAt(types,kP,m-2)}]}}return null}
 function genSeq(){const hard=CFG.hard,st0=CFG.stair?STAIRS.find(s=>s.id===CFG.stair):null,t=st0?st0.t:pick(locs()),stair=st0||(chance(.15)?pick(STAIRS.filter(s=>s.t===t)):null),kc=stair?(hard?ri(3,4):3):hard?ri(3,4):ri(2,3),want=pickCat(CATS);
  let cells;if(stair)cells=Array.from({length:kc},()=>[stair.p,stair.c]);else for(let a=0;a<50;a++){cells=Array.from({length:kc},()=>pick(CELLS[t]));if(cells.some(([p,c])=>catOf(p,c)===want))break}
  for(let a=0;a<12;a++){const m=2*kc+1+(hard?ri(0,2):ri(0,1))+extra(),types=typesEnding(m,TY(t)),idx=Array.from({length:kc},(_,n)=>m-1-2*(kc-1-n));
@@ -584,7 +593,7 @@ const STAIRS=[
  {id:'st:exh:hi',t:'hi',p:'HH',c:'LH',cat:'exh',mix:5,mi:0},{id:'st:exh:lo',t:'lo',p:'LL',c:'HL',cat:'exh',mix:5,mi:1},
  {id:'st:cont:hi',t:'hi',p:'HH',c:'HH',cat:'cont',mix:6,mi:0},{id:'st:cont:lo',t:'lo',p:'LL',c:'LL',cat:'cont',mix:6,mi:1},
  {id:'st:abs:hi',t:'hi',p:'EH',c:'HH',cat:'abs',mix:7,mi:0},{id:'st:abs:lo',t:'lo',p:'EL',c:'LL',cat:'abs',mix:7,mi:1}];
-const SNAMES=['Initiative buying','Initiative selling','Bids absorbing sellers','Offers absorbing buyers','Absorption at the offer, across the range','Absorption at the bid, across the range','Exhaustion at the highs','Exhaustion at the lows','Balance','No clean read'];
+const SNAMES=['Initiative buying','Initiative selling','Bids absorbing sellers','Offers absorbing buyers','Absorption at the offer, across the range','Absorption at the bid, across the range','Absorption at the top','Absorption at the bottom','Exhaustion at the highs','Exhaustion at the lows','Balance','No clean read'];
 const cellId=it=>`${it.t}:${it.pk}|${it.ck}`;
 const DEX=(()=>{const L=[];
  for(const t of ['hi','lo'])for(const [p,c] of CELLS[t]){const e=G[t][p+'|'+c];L.push({id:`${t}:${p}|${c}`,kind:'cell',t,p,c,cat:catOf(p,c),lean:leanOf(t,p,c),n:e.n,g:e})}
@@ -679,12 +688,12 @@ function ulResult(){const out=$('#lkout'),U=DV.ul||{};if(!out)return;if(!(U.ph&&
  const S=STRUCTS.find(s=>s.hk===U.ph&&s.lk===U.pl&&s.chk===U.ch&&s.clk===U.cl),r=S.read,cat=CAT[r.cat]||CAT.none,se=DEX[DEXI['s:'+r.name]],eh=DEX[DEXI[`hi:${U.ph}|${U.ch}`]],el=DEX[DEXI[`lo:${U.pl}|${U.cl}`]];
  const key='ul:'+[U.ph,U.pl,U.ch,U.cl].join(''),ex=DEXEX[key]||(DEXEX[key]=dexExample({...se,pool:[S]},0));
  const lean=v=>v>0?'leans up':v<0?'leans down':'no lean',line=(lab,e)=>{const cn=(CAT[e.cat]||CAT.none).n.toLowerCase();return `<p><b>${lab}</b> · ${e.n}${e.n.toLowerCase().includes(cn)?'':': '+cn}, ${lean(e.lean)}. <button class="btn lklink" data-dx="${DEXI[e.id]}">${no3(e.no)}</button></p>`};
- const agree=eh.lean&&el.lean&&eh.lean!==el.lean;
+ const agree=eh.lean&&el.lean&&eh.lean!==el.lean,dvH=['abs','exh'].includes(eh.cat),dvL=['abs','exh'].includes(el.cat);
  out.innerHTML=`<div class="lkres"><div class="dexhd"><span class="no">${se?no3(se.no):''}</span><span>Highs and lows together</span></div><h3 class="dexname" style="font-size:20px">${r.name}</h3>
   <div class="pts"><span class="pt">${cat.n}</span><span class="pt">${LEANW[r.lean]}</span></div><p>${r.why}</p>
   <p class="m"><b>Price:</b> ${shp(U.ph,U.pl)}.<br><b>CVD:</b> ${shp(U.ch,U.cl)}.</p>
   ${line('Highs',eh)}${line('Lows',el)}
-  ${agree?'<p class="m">The highs and the lows point opposite ways. In the game the latest swing breaks the tie: whichever side printed last leads.</p>':''}
+  ${agree?`<p class="m">The highs and the lows point opposite ways. ${r.cat!=='none'?`Read as one structure, <b>${r.name}</b> decides: it ${lean(r.lean)}.`:dvH!==dvL?`Only the ${dvH?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: it ${lean(dvH?eh.lean:el.lean)}.`:'Nothing settles it from the shape alone: the latest swing leads, whichever side printed last.'}</p>`:''}
   ${ex?`<div class="lkfig"><div><div class="lab" style="margin:0">Price</div>${dexSvg(ex,'P',r.lean)}</div><div><div class="lab" style="margin:0">CVD</div>${dexSvg(ex,'V',r.lean)}</div></div>`:''}
   ${se?`<button class="btn wide" data-dx="${DEXI[se.id]}">Open ${no3(se.no)} in the book</button>`:''}</div>`}
 function lkBind(){if(DV.lkm==='ul'){for(const s of document.querySelectorAll('[data-ul]'))s.onchange=()=>{(DV.ul||(DV.ul={}))[s.dataset.ul]=s.value||null;ulResult();SFX.click()};ulResult();return}
@@ -2096,7 +2105,7 @@ function scanScreen(){const o=RD.out;
  let body='';
  if(RD.busy)body='<div class="panel"><p class="q">Reading the picture…</p></div>';
  else if(RD.err)body=`<div class="panel"><p class="verdict no" style="font-size:20px">Couldn't read it</p><p>${RD.err}</p></div>`;
- else if(o){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?overall([o.H,o.L].map(c=>({...c,k:c.b})),(o.latest===o.H?'hi':'lo')):null;
+ else if(o){const st=o.H&&o.L?STRUCTS.find(s=>s.hk===o.H.pk&&s.lk===o.L.pk&&s.chk===o.H.ck&&s.clk===o.L.ck):null,ov=o.H&&o.L?structLean(st&&st.read,[o.H,o.L].map(c=>({...c,k:c.b}))):null;
   body=`<div class="panel rdpics" id="rdpics"></div>
   <div class="lab">Swing size</div>${`<div class="row seg">${[['0','Small'],['1','Medium'],['2','Large']].map(([v,l])=>`<button class="btn" data-rdsz="${v}" aria-pressed="${RD.size==+v}">${l}</button>`).join('')}</div>`}
   <div class="row seg" style="margin-top:6px"><button class="btn" data-rdall="0" aria-pressed="${!RD.all}">Latest highs and lows</button><button class="btn" data-rdall="1" aria-pressed="${RD.all}">Every swing</button></div>
@@ -2544,7 +2553,8 @@ function feedback(){
   let body=sg.items.map((it,n)=>itemText(it,n,sg.q)).join('');
   if(sg.q==='struct'){const H=sg.items.find(x=>x.t==='hi'),L=sg.items.find(x=>x.t==='lo'),lw2=v=>v>0?'leans up':v<0?'leans down':'no lean',ext=sg.rec==='hi'?'highs':'lows';
    const named=sg.read.cat!=='none'?`<b>As a structure: ${sg.read.name}.</b> ${sg.read.why} `:'<b>As a structure: no single named form.</b> ';
-   const how=sg.conflict?`Line by line they disagree: the highs are ${lc2(CAT[H.cat].n)} (${lw2(H.lean)}), the lows ${lc2(CAT[L.cat].n)} (${lw2(L.lean)}). The most recent swing is at the ${ext}, so it's the one being tested now and it leads: overall it ${lw2(sg.lean)}.`
+   const dis=`Line by line they disagree: the highs are ${lc2(CAT[H.cat].n)} (${lw2(H.lean)}), the lows ${lc2(CAT[L.cat].n)} (${lw2(L.lean)}).`;
+   const how=sg.conflict?(sg.by==='form'?`${dis} Read as one structure, the named form decides: overall it ${lw2(sg.lean)}.`:sg.by==='div'?`${dis} Only the ${sg.divT==='hi'?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: overall it ${lw2(sg.lean)}.`:`${dis} The most recent swing is at the ${ext}, so it's the one being tested now and it leads: overall it ${lw2(sg.lean)}.`)
     :`Highs ${lc2(CAT[H.cat].n)} (${lw2(H.lean)}), lows ${lc2(CAT[L.cat].n)} (${lw2(L.lean)}): overall it ${lw2(sg.lean)}.`;
    body+=`<p>${named}${how}</p>`}
   else if(sg.q==='single')body+=`<p>${sg.items[0].read}</p>`;
@@ -2589,7 +2599,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795738492';
+window.APPV='1795739447';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 if('serviceWorker' in navigator&&location.protocol==='https:')navigator.serviceWorker.register('sw.js').catch(()=>{});
