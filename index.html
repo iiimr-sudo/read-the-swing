@@ -503,7 +503,15 @@ function trendAt(types,kP,k){const a=k-1>=2?SC[kP[k-1]]:null,b=k-2>=2?SC[kP[k-2]
  if(xs.every(x=>x>=0)&&xs.some(x=>x>0))return 1;if(xs.every(x=>x<=0)&&xs.some(x=>x<0))return -1;return 0}
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
 /* the overall lean of a highs-and-lows pair: a named structure decides; with no named form, a lone divergence decides; otherwise the latest swing */
-function structLean(read,its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),agree=its[0].lean===its[1].lean;if(read&&read.cat!=='none')return {lean:read.lean,rec,conflict:!agree,by:'form'};return overall(its)}
+/* the overall lean of a structure. Order of authority:
+   1. the highs and the lows each show a divergence (absorption or exhaustion) pointing opposite ways: the newer one decides.
+      It is the extreme being tested right now; the older one is what the market already answered
+   2. a named form
+   3. one divergence against a plain continuation: the divergence
+   4. otherwise the latest swing */
+function structLean(read,its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),agree=its[0].lean===its[1].lean,dv=i=>i.cat==='abs'||i.cat==='exh';
+ if(dv(its[0])&&dv(its[1])&&its[0].lean&&its[1].lean&&its[0].lean!==its[1].lean){const old=its.find(i=>i!==rec);return {lean:rec.lean,rec,conflict:true,by:'newdiv',div:rec,old}}
+ if(read&&read.cat!=='none')return {lean:read.lean,rec,conflict:!agree,by:'form'};return overall(its)}
 function overall(its){const rec=its.reduce((a,b)=>a.k>b.k?a:b),L=its.map(i=>i.lean),dv=i=>i.cat==='abs'||i.cat==='exh';if(L[0]===L[1])return {lean:L[0],rec,conflict:false};
  const d=its.filter(dv);if(d.length===1)return {lean:d[0].lean,rec,conflict:true,by:'div',div:d[0]};if(!L[0])return {lean:L[1],rec,conflict:false};if(!L[1])return {lean:L[0],rec,conflict:false};return {lean:rec.lean,rec,conflict:true,by:'latest'}}
 
@@ -729,7 +737,7 @@ function ulResult(){const out=$('#lkout'),U=DV.ul||{};if(!out)return;if(!(U.ph&&
   <div class="pts"><span class="pt">${cat.n}</span><span class="pt">${LEANW[r.lean]}</span></div><p>${r.why}</p>
   <p class="m"><b>Price:</b> ${shp(U.ph,U.pl)}.<br><b>CVD:</b> ${shp(U.ch,U.cl)}.</p>
   ${line('Highs',eh)}${line('Lows',el)}
-  ${agree?`<p class="m">The highs and the lows point opposite ways. ${r.cat!=='none'?`Read as one structure, <b>${r.name}</b> decides: it ${lean(r.lean)}.`:dvH!==dvL?`Only the ${dvH?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: it ${lean(dvH?eh.lean:el.lean)}.`:'Nothing settles it from the shape alone: the latest swing leads, whichever side printed last.'}</p>`:''}
+  ${agree?`<p class="m">The highs and the lows point opposite ways. ${dvH&&dvL?`Both show effort and result coming apart, so <b>whichever printed last decides</b>: if the newest swing is a low, it ${lean(el.lean)}; if it is a high, it ${lean(eh.lean)}.${r.cat!=='none'?` The form's name, ${r.name}, describes it when the ${r.lean===eh.lean?'highs':'lows'} came last.`:''}`:r.cat!=='none'?`Read as one structure, <b>${r.name}</b> decides: it ${lean(r.lean)}.`:dvH!==dvL?`Only the ${dvH?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: it ${lean(dvH?eh.lean:el.lean)}.`:'Nothing settles it from the shape alone: the latest swing leads, whichever side printed last.'}</p>`:''}
   ${ex?`<div class="lkfig"><div><div class="lab" style="margin:0">Price</div>${dexSvg(ex,'P',r.lean)}</div><div><div class="lab" style="margin:0">CVD</div>${dexSvg(ex,'V',r.lean)}</div></div>`:''}
   ${se?`<button class="btn wide" data-dx="${DEXI[se.id]}">Open ${no3(se.no)} in the book</button>`:''}</div>`}
 function lkBind(){if(DV.lkm==='ul'){for(const s of document.querySelectorAll('[data-ul]'))s.onchange=()=>{(DV.ul||(DV.ul={}))[s.dataset.ul]=s.value||null;ulResult();SFX.click()};ulResult();return}
@@ -2255,6 +2263,7 @@ const rdEsc=s=>String(s==null?'':s).replace(/[&<>"'`]/g,c=>'&#'+c.charCodeAt(0)+
 function rdLeanInfo(o,st,ov){let lean=0,lvl=0,why='';
  if(ov){lean=ov.lean;if(!lean){why='Highs and lows cancel out';lvl=0}
   else if(!ov.conflict){lvl=3;why=st&&st.read.cat!=='none'?st.read.name:'Highs and lows agree'}
+  else if(ov.by==='newdiv'){lvl=2;why=`${ov.div.t==='hi'?'The newest highs':'The newest lows'} show ${CAT[ov.div.cat].n.toLowerCase()}; the older ${ov.old.t==='hi'?'highs':'lows'} disagree`}
   else if(ov.by==='form'){lvl=2;why=st.read.name}
   else if(ov.by==='div'){lvl=2;why=(ov.div.t==='hi'?'The highs':'The lows')+' show '+CAT[ov.div.cat].n.toLowerCase()}
   else{lvl=1;why='Highs and lows disagree; the latest swing leads'}}
@@ -2802,7 +2811,7 @@ function feedback(){
   if(sg.q==='struct'){const H=sg.items.find(x=>x.t==='hi'),L=sg.items.find(x=>x.t==='lo'),lw2=v=>v>0?'leans up':v<0?'leans down':'no lean',ext=sg.rec==='hi'?'highs':'lows';
    const named=sg.read.cat!=='none'?`<b>As a structure: ${sg.read.name}.</b> ${sg.read.why} `:'<b>As a structure: no single named form.</b> ';
    const dis=`Line by line they disagree: the highs are ${lc2(CAT[H.cat].n)} (${lw2(H.lean)}), the lows ${lc2(CAT[L.cat].n)} (${lw2(L.lean)}).`;
-   const how=sg.conflict?(sg.by==='form'?`${dis} Read as one structure, the named form decides: overall it ${lw2(sg.lean)}.`:sg.by==='div'?`${dis} Only the ${sg.divT==='hi'?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: overall it ${lw2(sg.lean)}.`:`${dis} The most recent swing is at the ${ext}, so it's the one being tested now and it leads: overall it ${lw2(sg.lean)}.`)
+   const how=sg.conflict?(sg.by==='newdiv'?`${dis} Both extremes show effort and result coming apart, in opposite directions. The newer one, at the ${ext}, is the extreme being tested now; the older one is already answered. The newer one decides: overall it ${lw2(sg.lean)}.`:sg.by==='form'?`${dis} Read as one structure, the named form decides: overall it ${lw2(sg.lean)}.`:sg.by==='div'?`${dis} Only the ${sg.divT==='hi'?'highs':'lows'} show effort and result coming apart, and the extreme where price is failing decides: overall it ${lw2(sg.lean)}.`:`${dis} The most recent swing is at the ${ext}, so it's the one being tested now and it leads: overall it ${lw2(sg.lean)}.`)
     :`Highs ${lc2(CAT[H.cat].n)} (${lw2(H.lean)}), lows ${lc2(CAT[L.cat].n)} (${lw2(L.lean)}): overall it ${lw2(sg.lean)}.`;
    body+=`<p>${named}${how}</p>`}
   else if(sg.q==='single')body+=`<p>${sg.items[0].read}</p>`;
@@ -2847,7 +2856,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795796193';
+window.APPV='1795798059';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
