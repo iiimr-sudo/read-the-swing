@@ -1994,6 +1994,14 @@ function rdWk(D,x,y,hw){const {w,d}=D;if(x-hw-3<0||x+hw+3>=w)return false;const 
  const p=(o+x)*4,c=Math.abs(d[p]-(L[0]+R[0])/2)+Math.abs(d[p+1]-(L[1]+R[1])/2)+Math.abs(d[p+2]-(L[2]+R[2])/2);
  return c>Math.max(55,3*Math.max(L[3],R[3])+20)}
 /* rows that are mostly one colour across the chart are lines (price line, levels), not candles */
+/* price is one continuous path: each candle starts near where the one before it ended. Of everything found, keep the longest
+   left-to-right chain in which each next candle sits within reach of the last one; icons, price tags, text and reflections
+   that are off the path drop out */
+function rdChain(C,minDx,ph){const n=C.length;if(n<3)return C;const hs=C.map(g=>g.bot-g.top).sort((a,b)=>a-b),hm=Math.max(2,hs[hs.length>>1]),tol=Math.max(4*hm,ph*.08),maxDx=Math.max(minDx*14,(C[n-1].x-C[0].x)*.12);
+ const best=new Float32Array(n),prev=new Int32Array(n).fill(-1);
+ for(let i=0;i<n;i++){best[i]=1;for(let j=i-1;j>=0;j--){const dx=C[i].x-C[j].x;if(dx<minDx)continue;if(dx>maxDx)break;
+   const gap=Math.max(0,C[i].top-C[j].bot,C[j].top-C[i].bot);if(gap>ph*.3*Math.max(1,dx/(minDx*6)))continue;const s=best[j]+1-Math.max(0,gap-tol)/tol-dx/(maxDx*3);if(s>best[i]){best[i]=s;prev[i]=j}}}
+ let e=0;for(let i=1;i<n;i++)if(best[i]>best[e])e=i;const out=[];for(let i=e;i>=0;i=prev[i])out.push(C[i]);return out.reverse()}
 function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
  for(let y=y0;y<y1;y++){let n=0;for(let x=0;x<w;x++){const c=cls[y*w+x];if(c===1||c===2)n++}if(n>w*.25)mask[y-y0]=1}
  const seg=[];for(let x=0;x<w;x++){let best=null,cur=null,gap=0;
@@ -2015,7 +2023,7 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b)}
  let C=G.filter(g=>g.bot-g.top>=2||g.x1-g.x0>=2);if(C.length<8)return [];
  const ws=C.map(g=>g.x1-g.x0+1).sort((a,b)=>a-b),W=ws[ws.length>>1];C=C.filter(g=>g.x1-g.x0+1<=W*2.6+1&&g.bot-g.top<(y1-y0)*.7);
- C.forEach(g=>g.x=(g.x0+g.x1)/2);C.sort((a,b)=>a.x-b.x);if(C.length<8)return [];
+ C.forEach(g=>g.x=(g.x0+g.x1)/2);C.sort((a,b)=>a.x-b.x);C=rdChain(C,W*.6,y1-y0);if(C.length<8)return [];
  const df=C.slice(1).map((g,i)=>g.x-C[i].x).sort((a,b)=>a-b),per=Math.max(1,df[df.length>>1]);
  /* keep the longest run of evenly spaced candles: drops icons and labels outside the chart */
  let runs=[],cur=[C[0]];for(let i=1;i<C.length;i++){if(C[i].x-C[i-1].x<=per*8)cur.push(C[i]);else{runs.push(cur);cur=[C[i]]}}runs.push(cur);
@@ -2061,14 +2069,19 @@ function rdPeriod(occ){const w=occ.length;let x0=0,x1=w-1;while(x0<w&&!occ[x0])x
 function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3))return [];
  let bp=0,bs=-1;if(fit){bp=fit.ph}else for(let ph=0;ph<per;ph+=.5){let s=0;for(let xc=ph;xc<w;xc+=per){const x=Math.round(xc);s+=occ[x]||0}if(s>bs){bs=s;bp=ph}}
  const S=[];for(let xc=bp;xc<w;xc+=per){const a=Math.max(0,Math.round(xc-per*.3)),b=Math.min(w-1,Math.round(xc+per*.3));let t=1e9,bt=-1,nu=0,nd=0;
-  for(let x=a;x<=b;x++){const s=seg[x];if(!s)continue;t=Math.min(t,s.t);bt=Math.max(bt,s.b);if(s.c===1)nu+=s.b-s.t+1;else nd+=s.b-s.t+1}
-  if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(let x=a;x<=b;x++){const s=seg[x];if(s){cx+=x*(s.b-s.t+1);cw+=s.b-s.t+1}}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
+  /* a slot can hold more than one coloured thing stacked vertically (a candle and an icon, a candle and a price tag):
+     group the columns' runs by vertical overlap and keep the heaviest group as the candle */
+  const runs=[];for(let x=a;x<=b;x++){const s=seg[x];if(s)runs.push({x,...s})}if(!runs.length)continue;
+  runs.sort((p,q)=>p.t-q.t);const grp=[];for(const r of runs){const G=grp[grp.length-1];if(G&&r.t<=G.b+Math.max(3,per*.4)){G.b=Math.max(G.b,r.b);G.r.push(r)}else grp.push({t:r.t,b:r.b,r:[r]})}
+  const mass=G=>G.r.reduce((m,r)=>m+r.b-r.t+1,0),GB=grp.reduce((m,G)=>mass(G)>mass(m)?G:m,grp[0]),keepX=new Set(GB.r.map(r=>r.x));
+  for(const r of GB.r){t=Math.min(t,r.t);bt=Math.max(bt,r.b);if(r.c===1)nu+=r.b-r.t+1;else nd+=r.b-r.t+1}
+  if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(const r of GB.r){cx+=r.x*(r.b-r.t+1);cw+=r.b-r.t+1}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
   const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(3,Math.round(per*.42)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw),bot=rdTrace(D,x,g.b,1,y1,g.c,hw);
    if(top<g.t&&g.t-top<(y1-y0)*.4)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.4)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b);S.push(g)}
  /* a "candle" far away from all its neighbours is an icon or a label, not price */
  const keep=S.filter((g,i)=>{const nb=S.slice(Math.max(0,i-6),i).concat(S.slice(i+1,i+7));if(nb.length<3)return true;const tp=Math.min(...nb.map(q=>q.t)),bt=Math.max(...nb.map(q=>q.b)),hs=nb.map(q=>q.b-q.t).sort((a,b)=>a-b),hm=Math.max(3,hs[hs.length>>1]);return !(g.b<tp-3*hm||g.t>bt+3*hm)});
- S.length=0;S.push(...keep);
+ S.length=0;S.push(...rdChain(keep,per*.6,y1-y0));
  if(S.length<8)return [];
  let runs=[],cur=[S[0]];for(let i=1;i<S.length;i++){if(S[i].slot-S[i-1].slot<=6)cur.push(S[i]);else{runs.push(cur);cur=[S[i]]}}runs.push(cur);
  const main=runs.sort((a,b)=>b.length-a.length)[0];
@@ -2667,7 +2680,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795742116';
+window.APPV='1795742670';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
