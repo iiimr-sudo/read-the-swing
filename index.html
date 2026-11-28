@@ -2033,9 +2033,12 @@ function rdHiWicks(D,list,y0,y1){const F=D.F;if(!F||!list||!list.length)return;c
  const trace=(c,x,from,dir,lim)=>{let y=from+dir,gap=0,end=from,cx=x,found=false;const span0=Math.round(3*S)+1;
   while(dir<0?y>=lim:y<lim){let bs=0,bx=cx;const span=found?1:span0;for(let dx=0;dx<=span;dx++)for(const xx of dx?[cx-dx,cx+dx]:[cx]){const s=score(c,xx,y)*(1-dx/(span0*12));if(s>bs){bs=s;bx=xx}}
    if(bs>0){end=y;gap=0;cx=bx;found=true}else if(++gap>gm)break;y+=dir}return end};
- for(const g of list){if(g.t==null||g.b==null)continue;const X=Math.round(g.x*S),c=g.c||0;
+ /* a trace that runs all the way to the window's edge, or far longer than any wick, is following a line (the chart border, a
+    crosshair, a stripe), not a wick: it is ignored */
+ const ph=y1-y0,maxW=ph*.4;
+ for(const g of list){if(g.t==null||g.b==null)continue;const X=Math.round(g.x*S),c=g.c||0;if(D.vl&&D.vl[Math.round(g.x)])continue;
   const tH=trace(c,X,Math.round(g.t*S),-1,Y0),bH=trace(c,X,Math.round(g.b*S),1,Y1);
-  const nt=tH/S,nb=bH/S;if(nt<g.top-.5)g.top=Math.max(y0,Math.floor(nt));if(nb>g.bot+.5)g.bot=Math.min(y1-1,Math.ceil(nb))}}
+  const nt=tH/S,nb=bH/S;if(nt<g.top-.5&&nt>y0+3&&g.t-nt<maxW)g.top=Math.floor(nt);if(nb>g.bot+.5&&nb<y1-4&&nb-g.b<maxW)g.bot=Math.ceil(nb)}}
 /* class map: 1 up colour, 2 down colour, 3 wick-like grey, 0 other */
 function rdClassify(D){const {w,h,d}=D,cls=new Uint8Array(w*h);let vs=[];for(let i=0;i<w*h;i+=97){const k=i*4;vs.push(Math.max(d[k],d[k+1],d[k+2])/255)}vs.sort((a,b)=>a-b);const bg=vs[vs.length>>1],dark=bg<.5;
  /* each pixel is compared with the background next to it on its row: the darkest pixel within a few candles either side
@@ -2127,7 +2130,7 @@ function rdCandles(D,y0,y1,perHint){const {w,cls}=D,mask=new Uint8Array(y1-y0);
   G.length=0;G.push(...out)}
  /* wicks drawn in grey (price candles on a dark theme): follow them from the body */
  for(const g of G){const xc=Math.round((g.x0+g.x1)/2);for(const x of [xc-1,xc,xc+1]){if(x<0||x>=w)continue;
-  const hw=Math.max(4,Math.round((g.x1-g.x0)*.32)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw,Math.max(1,Math.round((g.x1-g.x0)*.25))),bot=rdTrace(D,x,g.b,1,y1,g.c,hw,Math.max(1,Math.round((g.x1-g.x0)*.25)));
+  const hw=Math.max(4,Math.round((g.x1-g.x0)*.32)),gm_=Math.max(1,Math.round((g.x1-g.x0)*.25)),top0=rdTrace(D,x,g.t,-1,y0,g.c,hw,gm_),bot0=rdTrace(D,x,g.b,1,y1,g.c,hw,gm_),ph_=y1-y0,top=top0<=y0+2||g.t-top0>ph_*.4?g.t:top0,bot=bot0>=y1-3||bot0-g.b>ph_*.4?g.b:bot0;
   if(top<g.t&&g.t-top<(y1-y0)*.5)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.5)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b)}
  let C=G.filter(g=>g.bot-g.top>=2||g.x1-g.x0>=2);if(C.length<8)return [];
@@ -2190,7 +2193,7 @@ function rdGrid(D,y0,y1,per,prep,fit){const {w,cls}=D,{seg,occ}=prep;if(!(per>=3
   const mass=G=>G.r.reduce((m,r)=>m+r.b-r.t+1,0),GB=grp.reduce((m,G)=>mass(G)>mass(m)?G:m,grp[0]),keepX=new Set(GB.r.map(r=>r.x));
   for(const r of GB.r){t=Math.min(t,r.t);bt=Math.max(bt,r.b);if(r.c===1)nu+=r.b-r.t+1;else nd+=r.b-r.t+1}
   if(bt<0||nu+nd<3)continue;let cx=0,cw=0;for(const r of GB.r){cx+=r.x*(r.b-r.t+1);cw+=r.b-r.t+1}const g={c:nu>=nd?1:2,x0:a,x1:b,t,b:bt,x:xc,cx:cw?cx/cw:xc,slot:Math.round((xc-bp)/per)};
-  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(4,Math.round(per*.25)),gm=Math.max(1,Math.round(per*.1)),top=rdTrace(D,x,g.t,-1,y0,g.c,hw,gm),bot=rdTrace(D,x,g.b,1,y1,g.c,hw,gm);
+  const xm=Math.round(xc);for(const x of [xm-1,xm,xm+1]){if(x<0||x>=w)continue;const hw=Math.max(4,Math.round(per*.25)),gm=Math.max(1,Math.round(per*.1)),top0=rdTrace(D,x,g.t,-1,y0,g.c,hw,gm),bot0=rdTrace(D,x,g.b,1,y1,g.c,hw,gm),ph_=y1-y0,top=top0<=y0+2||g.t-top0>ph_*.4?g.t:top0,bot=bot0>=y1-3||bot0-g.b>ph_*.4?g.b:bot0;
    if(top<g.t&&g.t-top<(y1-y0)*.4)g.wt=Math.min(g.wt??g.t,top);if(bot>g.b&&bot-g.b<(y1-y0)*.4)g.wb=Math.max(g.wb??g.b,bot)}
   g.top=Math.min(g.t,g.wt??g.t);g.bot=Math.max(g.b,g.wb??g.b);S.push(g)}
  /* a "candle" far away from all its neighbours is an icon or a label, not price */
@@ -2238,7 +2241,10 @@ function rdPivots(c,k,per){const n=c.length,pv=[];per=per||1;
   if(H)pv.push({t:'hi',i,v:c[i].hv});if(L)pv.push({t:'lo',i,v:c[i].lv})}
  const out=[];for(const p of pv){const q=out[out.length-1];if(q&&q.t===p.t){if(p.t==='hi'?p.v>q.v:p.v<q.v)out[out.length-1]=p}else out.push(p)}return out}
 /* swings must be real moves: drop the smallest leg (both its ends) while it is under a share of the chart's height */
-function rdZig(pv,c,f){const rg=Math.max(...c.map(x=>x.hv))-Math.min(...c.map(x=>x.lv)),thr=f*rg;pv=pv.slice();
+/* one candle can't be both the swing high and the swing low (a wide candle at the end of a run reaches both): keep the one
+   that alternates with the swing before it, so a spike candle at the top of a rally counts as the high */
+function rdDedup(pv){const o=[];for(const p of pv){const l=o[o.length-1];if(l&&l.i===p.i){const prev=o[o.length-2];if(prev?prev.t===p.t:false)continue;o[o.length-1]=p}else o.push(p)}return o}
+function rdZig(pv,c,f){pv=rdDedup(pv);const rg=Math.max(...c.map(x=>x.hv))-Math.min(...c.map(x=>x.lv)),thr=f*rg;pv=pv.slice();
  const ext=(X,Y)=>X.t==='hi'?X.v>Y.v:X.v<Y.v;
  for(let it=0;it<200&&pv.length>2;it++){let m=-1,s=Infinity;for(let i=0;i+1<pv.length;i++){const d=Math.abs(pv[i].v-pv[i+1].v);if(d<s){s=d;m=i}}if(s>=thr)break;
   /* drop the leg's two ends; each one hands its place to the neighbour of its kind if it was the stronger extreme */
@@ -2266,9 +2272,17 @@ function rdCmp(c,t,a,b){const sl=c.slice(Math.min(a,b),Math.max(a,b)+1);
    the weak one counts as equal. "Price made a big higher high, CVD only just poked above" is CVD failing to keep up */
 function rdRel(t,pP,pV){const a=pP.d,b=pV.d;if(!(a*b>0))return [pP,pV];const A=Math.abs(a),B=Math.abs(b),E=t==='hi'?'EH':'EL';
  if(B<.35&&B<.6*A&&pV.k!==E)return [pP,{...pV,k:E,rel:true}];if(A<.35&&A<.6*B&&pP.k!==E)return [{...pP,k:E,rel:true},pV];return [pP,pV]}
-function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null;
+/* the ends of the matched candles, once more: within the first and last four, a candle (price or CVD) that floats clear of its
+   neighbour by more than a fifth of its window's height, or is a sliver next to normal candles, is something at the chart's
+   edge (the border, a price tag, a box edge) and is dropped together with everything beyond it */
+function rdTrimPairs(pr,hP,hV){if(!pr||pr.length<12)return pr;const jump=(A,B)=>Math.max(0,A.top-B.bot,B.top-A.bot),hs=pr.map(([p])=>p.bot-p.top).sort((a,b)=>a-b),hm=hs[hs.length>>1];
+ const bad=(i,j)=>{const [p,v]=pr[i],[p2,v2]=pr[j];return jump(p,p2)>hP*.2||jump(v,v2)>hV*.2||(p.bot-p.top<=2&&hm>8)};let a=0,b=pr.length;
+ for(let i=b-1;i>=b-4;i--)if(bad(i,i-1)){b=i}
+ for(let i=0;i<4;i++)if(bad(i,i+1)){a=i+1}
+ return pr.slice(a,b)}
+function rdAnalyse(size,inner){if(size==null)size=RD.size;const pairs=RD.pairs;if(!pairs||pairs.length<12)return null;
  const P=pairs.map(([p])=>({hv:-p.top,lv:-p.bot,x:p.x,top:p.top,bot:p.bot})),V=pairs.map(([,q])=>({hv:-q.top,lv:-q.bot,x:q.x,top:q.top,bot:q.bot}));
- const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max([2,4,7][RD.size],Math.round(slots*[.018,.035,.065][RD.size])),pv=rdTail(rdZig(rdPivots(P,k,per),P,[.05,.12,.2][RD.size]),P,[.05,.12,.2][RD.size],Math.max(2,k)),cv=(t,i)=>{
+ const n=P.length,per=(RD.cP&&RD.cP.per)||1,slots=(P[n-1].x-P[0].x)/per+1,k=Math.max([2,4,7][size],Math.round(slots*[.018,.035,.065][size])),pv=rdTail(rdZig(rdPivots(P,k,per),P,[.05,.12,.2][size]),P,[.05,.12,.2][size],Math.max(2,k)),cv=(t,i)=>{
   /* CVD's own swing for this price swing: CVD often peaks a few candles before or after price does. Its extreme is looked for
      within the swing-size window around the price swing, but never past the price swings on either side (so it stays in the
      same leg) */
@@ -2282,7 +2296,14 @@ function rdAnalyse(){const pairs=RD.pairs;if(!pairs||pairs.length<12)return null
    const ca=cv(c.t,a.i),[pP,pV]=rdRel(c.t,pP0,rdCmp(V,c.t,ca,c.cb));return {t:c.t,a:a.i,b:c.b,ca,cb:c.cb,relP:!!pP.rel,relV:!!pV.rel,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(c.t,pP.k,pV.k),lvl:1}}return null};
  /* when the latest swing went past the last one but only reached an older swing, that older swing is the level being
     tested and the read is made against it; the last two swings are kept as the small read */
- const sw=(c,lv)=>lv?[{...lv,lvl:0,level:true},{...c,lvl:1,minor:true}]:[c,null],[Hm,Hs]=sw(H,lvl(H)),[Lm,Ls]=sw(L,lvl(L));
+ const sw=(c,lv)=>lv?[{...lv,lvl:0,level:true},{...c,lvl:1,minor:true}]:[c,null];let [Hm,Hs]=sw(H,lvl(H)),[Lm,Ls]=sw(L,lvl(L));
+ /* a breakout: the latest swing ran far past the previous one at this size (more than one and a half times the pullback
+    between them). That previous swing is from before the run and says little about the top (or bottom) it is making now.
+    The read is made against the last smaller swing at this level, the one price ran into on the way; the comparison with the
+    swing before the run is kept as the trend read */
+ if(size>0&&!inner){let sm=null;const near=c=>{if(!c||Math.abs(c.dP)<=1.5||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;sm=sm||rdAnalyse(0,true);if(!sm)return null;
+   const s=[...sm.comps].reverse().find(x=>x.t===c.t&&Math.abs(x.b-c.b)<=1&&x.a>c.a);return s?{...s,lvl:0,near:true}:null};
+  const nh=Hs?null:near(Hm),nl=Ls?null:near(Lm);if(nh){Hs={...Hm,lvl:1,minor:true,trend:true};Hm=nh}if(nl){Ls={...Lm,lvl:1,minor:true,trend:true};Lm=nl}}
  return {P,V,n,k,pv,comps,H:Hm,L:Lm,H2:Hs,L2:Ls,latest:Hm&&Lm?(Hm.b>Lm.b?Hm:Lm):Hm||Lm}}
 async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
  try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;
@@ -2296,7 +2317,7 @@ async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
    const gP=rdGrid(D,0,RD.split,per,pp),gV=rdGrid(D,RD.split,D.h,per,pv);
    const gPr=rdPair(gP,gV,D.w,D.w,true),bPr=rdPair(bP,bV,D.w,D.w,true),q=(pr,P)=>pr.length<12||!P.per?0:pr.length/Math.max(pr.length,(P[P.length-1].x-P[0].x)/P.per+1);
    const regOf=C=>{if(!C||C.length<12||!C.per)return 0;let k=0;for(let i=1;i<C.length;i++){const d=C[i].x-C[i-1].x;if(Math.abs(d-C.per)<=C.per*.25)k++}return k/(C.length-1)};RD.reg=[regOf(bP),regOf(bV)];/* blobs when they come out evenly spaced; otherwise the grid, unless the grid lines up far fewer candles in both windows */
-   const rb=Math.min(regOf(bP),regOf(bV)),nb=bPr.length,ng=gPr.length;RD.cmp=[ng,nb,+rb.toFixed(2)];const useG=ng>=12&&(nb<12||(rb<.7&&ng>=nb*.8));RD.cP=useG?gP:bP;RD.cV=useG?gV:bV;RD.pairs=useG?gPr:bPr;RD.method=useG?'grid':'blob';
+   const rb=Math.min(regOf(bP),regOf(bV)),nb=bPr.length,ng=gPr.length;RD.cmp=[ng,nb,+rb.toFixed(2)];const useG=ng>=12&&(nb<12||(rb<.7&&ng>=nb*.8));RD.cP=useG?gP:bP;RD.cV=useG?gV:bV;RD.pairs=rdTrimPairs(useG?gPr:bPr,RD.split,D.h-RD.split);RD.method=useG?'grid':'blob';
    if(!RD.noHi){const cy0=RD.crop?Math.round(RD.crop.y0*D.h):0,cy1=RD.crop?Math.round(RD.crop.y1*D.h):D.h;rdHiWicks(D,RD.cP,cy0,RD.split);rdHiWicks(D,RD.cV,RD.split,cy1)}}
   else{const DP=rdClassify(rdData(RD.P,1400)),DV=rdClassify(rdData(RD.V,1400));RD.DP=DP;RD.DV=DV;const pp=rdPrep(DP,0,DP.h),pv=rdPrep(DV,0,DV.h),a=rdPeriod(pp.occ),b=rdPeriod(pv.occ),pa=a.conf>=b.conf?a.per:b.per*DP.w/DV.w;
    const gP=rdGrid(DP,0,DP.h,pa,pp),gV=rdGrid(DV,0,DV.h,pa*DV.w/DP.w,pv),bP=rdCandles(DP,0,DP.h),bV=rdCandles(DV,0,DV.h,bP.per&&bP.per*DV.w/DP.w);
@@ -2317,7 +2338,7 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
    x.lineCap='round';x.strokeStyle='rgba(20,19,16,.85)';x.lineWidth=(main?7:5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();
    x.strokeStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'rgba(224,173,37,.75)';if(c.lvl)x.setLineDash([9*u,6*u]);x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();x.setLineDash([]);
    for(const k of [i,j]){x.save();x.translate(S[k].x,y(k));x.rotate(Math.PI/4);x.fillStyle='#e0ad25';x.strokeStyle='#141310';x.lineWidth=1.5*u;x.fillRect(-4.5*u,-4.5*u,9*u,9*u);x.strokeRect(-4.5*u,-4.5*u,9*u,9*u);x.restore()}
-   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main?' · forming':''}${c.minor?' · last swing':c.level?' · the level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
+   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main?' · forming':''}${c.trend?' · before the run':c.minor?' · last swing':c.level?' · the level':c.near?' · at this level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
    x.fillStyle='rgba(20,19,16,.85)';x.fillRect(mx-4*u,my-14*u*(main?1:.8),tw+8*u,(main?19:15)*u);x.fillStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'#e8e2cf';x.fillText(txt,mx,my)}}
  if(RD.mode==='one'&&RD.crop){const c=RD.crop;x.strokeStyle='#e8e2cf';x.lineWidth=2*u;x.setLineDash([10*u,6*u]);x.strokeRect(c.x0*D.w,c.y0*D.h,(c.x1-c.x0)*D.w,(c.y1-c.y0)*D.h);x.setLineDash([])}
  if(RD.mode==='one'){x.strokeStyle='rgba(224,173,37,.8)';x.setLineDash([8*u,6*u]);x.lineWidth=1.5*u;x.beginPath();x.moveTo(0,RD.split);x.lineTo(D.w,RD.split);x.stroke();x.setLineDash([])}
@@ -2362,7 +2383,7 @@ function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" d
  else{const fs=jrStats(e=>e.lvl===lvl&&!!e.lean===!!lean);if(fs.n>=5)rec=`Your ${(firm||'sideways').toLowerCase()} reads: ${fs.ok} of ${fs.n} right (${hz} min)`}
  const pos=RD.mode==='one'&&RD.D1&&RD.split?`style="top:calc(8px + ${(RD.split/RD.D1.h*100).toFixed(1)}%);transform:translateY(-50%)"`:'';
  return `<div class="rdlean l${lvl} ${lean>0?'up':lean<0?'dn':'fl'}" ${pos}><button class="rdx" data-rdlean="0" aria-label="Hide">×</button><svg viewBox="-22 -22 44 44" aria-hidden="true">${rdArrow(lean,lvl)}</svg>
-  ${head?`<span class="firm">${head}</span>`:''}<b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}${agreeTxt?`<span class="agree">${agreeTxt}</span>`:''}<span class="why">${rdEsc(why)}.${big>0?' The last small swing agrees.':big<0?' The last small swing disagrees.':''}</span>${rec?`<span class="rec">${rec}</span>`:''}</div>`}
+  ${head?`<span class="firm">${head}</span>`:''}<b>${word}</b>${firm?`<span class="firm">${firm}</span>`:''}${agreeTxt?`<span class="agree">${agreeTxt}</span>`:''}<span class="why">${rdEsc(why)}.${big?(([o.H2,o.L2].some(c=>c&&c.trend))?(big>0?' The trend agrees.':' The trend disagrees.'):(big>0?' The last small swing agrees.':' The last small swing disagrees.')):''}</span>${rec?`<span class="rec">${rec}</span>`:''}</div>`}
 
 /* ---------- scan journal: each logged read, and what price did next ---------- */
 function jrList(){if(!Array.isArray(S.jr))S.jr=[];if(S.jr.some(e=>!e||typeof e.id!=='string'||!/^[a-z0-9]+$/.test(e.id)))S.jr=S.jr.filter(e=>e&&typeof e.id==='string'&&/^[a-z0-9]+$/.test(e.id));return S.jr}
@@ -2419,8 +2440,8 @@ function scanScreen(){const o=RD.out,nOpen=jrOpen();
   ${RD.mode==='one'?`<div class="lab">Divider between price and CVD</div><input type="range" id="rdsplit" min="${Math.round(RD.D1.h*.15)}" max="${Math.round(RD.D1.h*.9)}" value="${RD.split}" style="width:100%">`:''}
   <div class="panel dex">
    <p class="m">${o.n} candles lined up in both windows · ${o.pv.length} swings at this size · being tested now: the latest ${o.latest?(o.latest.t==='hi'?'high':'low'):'swing'}.</p>
-   ${rdLine(o.H,o.H&&o.H.level?'Highs · against the high it is testing':'Highs · last two')}${o.H2?rdLine(o.H2,'Highs · the last two swings (white dashes)'):''}${rdLine(o.L,o.L&&o.L.level?'Lows · against the low it is testing':'Lows · last two')}${o.L2?rdLine(o.L2,'Lows · the last two swings (white dashes)'):''}
-   ${o.H2||o.L2?'<p class="m">The latest swing went past the swing before it but only reached an older one, so the read is made against that older swing: it is the level being tested. The white dashes are the small read between the last two swings.</p>':''}
+   ${rdLine(o.H,o.H&&o.H.level?'Highs · against the high it is testing':o.H&&o.H.near?'Highs · against the last high at this level':'Highs · last two')}${o.H2?rdLine(o.H2,o.H2.trend?'Highs · against the high before the run (white dashes)':'Highs · the last two swings (white dashes)'):''}${rdLine(o.L,o.L&&o.L.level?'Lows · against the low it is testing':o.L&&o.L.near?'Lows · against the last low at this level':'Lows · last two')}${o.L2?rdLine(o.L2,o.L2.trend?'Lows · against the low before the run (white dashes)':'Lows · the last two swings (white dashes)'):''}
+   ${(o.H2&&o.H2.trend)||(o.L2&&o.L2.trend)?'<p class="m">The latest swing broke far past the one before it at this size, so that one is from before the run. The read is made against the last smaller swing at the level price is at now; the white dashes compare with the swing before the run (the trend).</p>':''}${(o.H2&&!o.H2.trend)||(o.L2&&!o.L2.trend)?'<p class="m">The latest swing went past the swing before it but only reached an older one, so the read is made against that older swing: it is the level being tested. The white dashes are the small read between the last two swings.</p>':''}
    ${st?`<div class="lab">Together · ${st.read.name}</div><p>${st.read.why}</p>${ov?`<p>Overall it ${ov.lean>0?'leans up':ov.lean<0?'leans down':'has no lean'}${ov.conflict?': the highs and lows disagree, and the latest swing leads':''}.</p>`:''}`:''}
    ${!o.H||!o.L?'<p class="m">Only one side has two swings at this size. Try a smaller swing size.</p>':''}
    <p class="m" style="margin-top:10px">It reads pixels, not data. Check the gold lines sit on the swings you'd pick. If not, change the swing size or crop tighter.</p></div>`}
@@ -2932,7 +2953,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795829667';
+window.APPV='1795832295';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
