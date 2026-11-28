@@ -2260,9 +2260,14 @@ function rdTail(pv,c,f,gap){if(!pv.length||RD.noTail)return pv;const rg=Math.max
  const need=()=>{const q=pv[pv.length-2];return Math.max(thr,q?Math.abs(e.v-q.v)*.5:0)};
  for(let i=e.i+1;i<c.length;i++){if(e.t==='hi'){if(c[i].hv>e.v){e={t:'hi',i,v:c[i].hv,prov:true,isNew:e.isNew};pv[pv.length-1]=e}else if(e.v-c[i].lv>=need()&&i-e.i>=gap){e={t:'lo',i,v:c[i].lv,prov:true,isNew:true};pv.push(e)}}
   else{if(c[i].lv<e.v){e={t:'lo',i,v:c[i].lv,prov:true,isNew:e.isNew};pv[pv.length-1]=e}else if(c[i].hv-e.v>=need()&&i-e.i>=gap){e={t:'hi',i,v:c[i].hv,prov:true,isNew:true};pv.push(e)}}}
- /* a new swing still running at the right edge, with no turn after it yet, only counts once it has already gone past the
-    previous swing of its kind (a higher high or lower low is already true; a lower high could still keep rising) */
- const L=pv[pv.length-1],Q=pv[pv.length-3];if(L&&L.prov&&L.isNew&&Q&&(L.t==='hi'?L.v<=Q.v:L.v>=Q.v))pv.pop();
+ /* a new swing still running at the right edge, with no turn after it yet, only counts as a swing once it has already gone
+    past the previous swing of its kind (a higher high or lower low is already true; a lower high could still keep rising) */
+ {const L=pv[pv.length-1],Q=pv[pv.length-3];if(L&&L.prov&&L.isNew&&Q&&(L.t==='hi'?L.v<=Q.v:L.v>=Q.v))pv.pop()}
+ /* the pullback (or bounce) happening now, after the last swing: once price has turned away from that swing by a real amount
+    (the minimum move, and a quarter of the leg into it), where it is now is the swing being made. It is kept aside, to be
+    read "so far" against the previous swing of its kind; it does not change the confirmed swings */
+ {const L=pv[pv.length-1],q=pv[pv.length-2];if(L&&L.i<c.length-1){let x=L.i+1;for(let i=L.i+1;i<c.length;i++)if(L.t==='hi'?c[i].lv<c[x].lv:c[i].hv>c[x].hv)x=i;
+   const mv=L.t==='hi'?L.v-c[x].lv:c[x].hv-L.v,need2=Math.max(thr,q?Math.abs(L.v-q.v)*.25:0);if(mv>=need2)pv.edge={t:L.t==='hi'?'lo':'hi',i:x,v:L.t==='hi'?c[x].lv:c[x].hv}}}
  return pv}
 function rdCmp(c,t,a,b){const sl=c.slice(Math.min(a,b),Math.max(a,b)+1);
  if(t==='hi'){const pb=Math.min(...sl.map(x=>x.lv)),d=(c[b].hv-c[a].hv)/Math.max(1e-9,c[a].hv-pb);return {d,k:Math.abs(d)<.1?'EH':d>0?'HH':'LH'}}
@@ -2290,7 +2295,12 @@ function rdAnalyse(size,inner){if(size==null)size=RD.size;const pairs=RD.pairs;i
   let best=i;for(let j=lo;j<=hi;j++)if(t==='hi'?V[j].hv>V[best].hv:V[j].lv<V[best].lv)best=j;return best};
  const comps=[];for(let m=2;m<pv.length;m++){const a=pv[m-2],b=pv[m];if(a.t!==b.t)continue;const ca=cv(a.t,a.i),cb=cv(b.t,b.i),[pP,pV]=rdRel(a.t,rdCmp(P,a.t,a.i,b.i),rdCmp(V,a.t,ca,cb));
   comps.push({t:a.t,a:a.i,b:b.i,prov:!!b.prov,ca,cb,relP:!!pP.rel,relV:!!pV.rel,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(a.t,pP.k,pV.k)})}
- const H=[...comps].reverse().find(c=>c.t==='hi'),L=[...comps].reverse().find(c=>c.t==='lo');
+ let H=[...comps].reverse().find(c=>c.t==='hi'),L=[...comps].reverse().find(c=>c.t==='lo'),Hf=null,Lf=null;
+ /* the swing being made now, read so far against the previous swing of its kind. When there is no confirmed comparison of
+    that kind at this size it becomes the read; otherwise it is drawn alongside, marked "so far", and the confirmed one reads */
+ if(pv.edge){const E=pv.edge,A=[...pv].reverse().find(p=>p.t===E.t&&p.i<E.i);if(A){const ca=cv(E.t,A.i),cb=cv(E.t,E.i),[pP,pV]=rdRel(E.t,rdCmp(P,E.t,A.i,E.i),rdCmp(V,E.t,ca,cb));
+   const f={t:E.t,a:A.i,b:E.i,prov:true,sofar:true,ca,cb,relP:!!pP.rel,relV:!!pV.rel,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(E.t,pP.k,pV.k)};
+   if(E.t==='hi'){if(!H)H=f;else Hf=f}else{if(!L)L=f;else Lf=f}}}
  /* the level being tested: when the latest swing went past the previous one, look further back for the first earlier swing at or beyond it */
  const lvl=c=>{if(!c||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;for(let m=pv.length-1;m>=0;m--){const a=pv[m];if(a.t!==c.t||a.i>=c.a)continue;const pP0=rdCmp(P,c.t,a.i,c.b);if(pP0.k===(c.t==='hi'?'HH':'LL'))continue;
    const ca=cv(c.t,a.i),[pP,pV]=rdRel(c.t,pP0,rdCmp(V,c.t,ca,c.cb));return {t:c.t,a:a.i,b:c.b,ca,cb:c.cb,relP:!!pP.rel,relV:!!pV.rel,pk:pP.k,ck:pV.k,dP:pP.d,dV:pV.d,cat:catOf(pP.k,pV.k),lean:leanOf(c.t,pP.k,pV.k),lvl:1}}return null};
@@ -2304,7 +2314,7 @@ function rdAnalyse(size,inner){if(size==null)size=RD.size;const pairs=RD.pairs;i
  if(size>0&&!inner){let sm=null;const near=c=>{if(!c||Math.abs(c.dP)<=1.5||(c.t==='hi'?c.pk!=='HH':c.pk!=='LL'))return null;sm=sm||rdAnalyse(0,true);if(!sm)return null;
    const s=[...sm.comps].reverse().find(x=>x.t===c.t&&Math.abs(x.b-c.b)<=1&&x.a>c.a);return s?{...s,lvl:0,near:true}:null};
   const nh=Hs?null:near(Hm),nl=Ls?null:near(Lm);if(nh){Hs={...Hm,lvl:1,minor:true,trend:true};Hm=nh}if(nl){Ls={...Lm,lvl:1,minor:true,trend:true};Lm=nl}}
- return {P,V,n,k,pv,comps,H:Hm,L:Lm,H2:Hs,L2:Ls,latest:Hm&&Lm?(Hm.b>Lm.b?Hm:Lm):Hm||Lm}}
+ return {P,V,n,k,pv,comps,H:Hm,L:Lm,H2:Hs,L2:Ls,Hf,Lf,latest:Hm&&Lm?(Hm.b>Lm.b?Hm:Lm):Hm||Lm}}
 async function rdRun(){RD.err=null;RD.out=null;RD.logged=null;
  try{if(RD.mode==='one'){const D=rdClassify(rdData(RD.src,1400));RD.D1=D;
    if(RD.crop){const c=RD.crop,X0=Math.round(c.x0*D.w),X1=Math.round(c.x1*D.w),Y0=Math.round(c.y0*D.h),Y1=Math.round(c.y1*D.h);for(let y=0;y<D.h;y++)for(let x=0;x<D.w;x++)if(x<X0||x>X1||y<Y0||y>Y1)D.cls[y*D.w+x]=0}
@@ -2333,12 +2343,12 @@ function rdCanvas(D,panes){const c=document.createElement('canvas');c.width=D.w;
   /* each candle it found: a thin line from its high to its low, with a tick at each end */
   if(RD.dots){x.lineWidth=1.2*u;for(const s of S){x.strokeStyle='rgba(20,19,16,.7)';x.beginPath();x.moveTo(s.x+1.2*u,s.top);x.lineTo(s.x+1.2*u,s.bot);x.stroke();
    x.strokeStyle='rgba(224,173,37,.95)';x.beginPath();x.moveTo(s.x,s.top);x.lineTo(s.x,s.bot);x.moveTo(s.x-2.5*u,s.top);x.lineTo(s.x+2.5*u,s.top);x.moveTo(s.x-2.5*u,s.bot);x.lineTo(s.x+2.5*u,s.bot);x.stroke()}}
-  const show=RD.all?o.comps:[o.H2,o.L2,o.H,o.L].filter(Boolean);
+  const show=RD.all?o.comps:[o.H2,o.L2,o.Hf,o.Lf,o.H,o.L].filter(Boolean);
   for(const c of show){const [i,j]=cmpI(c,pn.w),hi=c.t==='hi',y=k=>(hi?S[k].top-4*u:S[k].bot+4*u),key=pn.w==='P'?c.pk:c.ck,d=pn.w==='P'?c.dP:c.dV,main=c===o.H||c===o.L;
    x.lineCap='round';x.strokeStyle='rgba(20,19,16,.85)';x.lineWidth=(main?7:5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();
-   x.strokeStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'rgba(224,173,37,.75)';if(c.lvl)x.setLineDash([9*u,6*u]);x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();x.setLineDash([]);
+   x.strokeStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'rgba(224,173,37,.75)';if(c.lvl)x.setLineDash([9*u,6*u]);else if(c.sofar&&!main)x.setLineDash([5*u,5*u]);x.lineWidth=(main?4:2.5)*u;x.beginPath();x.moveTo(S[i].x,y(i));x.lineTo(S[j].x,y(j));x.stroke();x.setLineDash([]);
    for(const k of [i,j]){x.save();x.translate(S[k].x,y(k));x.rotate(Math.PI/4);x.fillStyle='#e0ad25';x.strokeStyle='#141310';x.lineWidth=1.5*u;x.fillRect(-4.5*u,-4.5*u,9*u,9*u);x.strokeRect(-4.5*u,-4.5*u,9*u,9*u);x.restore()}
-   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main?' · forming':''}${c.trend?' · before the run':c.minor?' · last swing':c.level?' · the level':c.near?' · at this level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
+   const rl=pn.w==='P'?c.relP:c.relV,txt=`${key}${rl?' (only':''} ${Math.abs(Math.round(d*100))}%${rl?')':''}${c===o.latest&&main?' · latest':''}${c.prov&&main&&!c.sofar?' · forming':''}${c.sofar?' · so far':''}${c.trend?' · before the run':c.minor?' · last swing':c.level?' · the level':c.near?' · at this level':''}`;x.font=`700 ${(main?15:12)*u}px "Saira Semi Condensed","Avenir Next Condensed","Helvetica Neue",sans-serif`;const tw=x.measureText(txt).width,mx=Math.min(D.w-tw-6*u,Math.max(4*u,(S[i].x+S[j].x)/2-tw/2)),my=(y(i)+y(j))/2+(hi?-10*u:20*u)+(c.lvl?(hi?-22*u:22*u):0);
    x.fillStyle='rgba(20,19,16,.85)';x.fillRect(mx-4*u,my-14*u*(main?1:.8),tw+8*u,(main?19:15)*u);x.fillStyle=c.lvl?'#e8e2cf':main?'#e0ad25':'#e8e2cf';x.fillText(txt,mx,my)}}
  if(RD.mode==='one'&&RD.crop){const c=RD.crop;x.strokeStyle='#e8e2cf';x.lineWidth=2*u;x.setLineDash([10*u,6*u]);x.strokeRect(c.x0*D.w,c.y0*D.h,(c.x1-c.x0)*D.w,(c.y1-c.y0)*D.h);x.setLineDash([])}
  if(RD.mode==='one'){x.strokeStyle='rgba(224,173,37,.8)';x.setLineDash([8*u,6*u]);x.lineWidth=1.5*u;x.beginPath();x.moveTo(0,RD.split);x.lineTo(D.w,RD.split);x.stroke();x.setLineDash([])}
@@ -2377,7 +2387,7 @@ function rdLeanBox(o,st,ov){if(RD.hideLean)return `<button class="rdlean mini" d
  const I=rdLeanInfo(o,st,ov);if(!I)return '';let {lean,lvl,why,big}=I,word=lean?(lean>0?'Up':'Down'):'Sideways',firm=FIRMW[lvl],head='',agreeTxt='';
  if(RD.auto&&RD.cons){const C=RD.cons;lean=C.dir;word=lean?(lean>0?'Up':'Down'):'Sideways';head='Most likely';
   const mine=C.R.find(r=>r.s===RD.size);lvl=C.agree===C.used&&lean?3:C.agree>=2&&lean?2:lean?1:0;firm='';
-  agreeTxt=`${C.agree} of ${C.used} swing sizes ${lean?'point '+(lean>0?'up':'down'):'are flat'}`;if(mine&&mine.log)why+=`. Your log for this read went ${JRDIR(mine.log.d)} ${Math.max(mine.log.js.up,mine.log.js.dn,mine.log.js.fl)} of ${mine.log.js.n}`}
+  agreeTxt=lean?`${C.agree} of ${C.used} swing sizes point ${lean>0?'up':'down'}`:`The swing sizes cancel out (${C.R.filter(r=>r.dir>0).length} up, ${C.R.filter(r=>r.dir<0).length} down)`;if(mine&&mine.log)why+=`. Your log for this read went ${JRDIR(mine.log.d)} ${Math.max(mine.log.js.up,mine.log.js.dn,mine.log.js.fl)} of ${mine.log.js.n}`}
  const hz=S.jrH||15,ks=jrStats(e=>e.key===I.key);let rec='';
  if(ks.n>=3)rec=`Your log: ${lean>0?ks.up:lean<0?ks.dn:ks.fl} of ${ks.n} went ${JRDIR(lean)} (${hz} min)`;
  else{const fs=jrStats(e=>e.lvl===lvl&&!!e.lean===!!lean);if(fs.n>=5)rec=`Your ${(firm||'sideways').toLowerCase()} reads: ${fs.ok} of ${fs.n} right (${hz} min)`}
@@ -2953,7 +2963,7 @@ window.claude?.hot?.ready?window.claude.hot.ready(boot):boot(window.claude?.hot?
 </script>
 <script>
 /* app shell: works offline once opened, keeps its own saved progress */
-window.APPV='1795832295';
+window.APPV='1795833039';
 (()=>{let old=null;try{old=localStorage.getItem('rts-ver');localStorage.setItem('rts-ver',APPV)}catch(e){}
  if(old&&old!==APPV)setTimeout(()=>{try{toast('Updated','New version loaded · your progress is kept','',()=>SFX.place())}catch(e){}},1200)})();
 (()=>{const f=document.createElement('p');f.className='appver';const dt=new Date(+APPV*1000);f.textContent='Version '+dt.toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});const a=document.querySelector('.app');a&&a.appendChild(f)})();
